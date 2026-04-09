@@ -1,0 +1,28 @@
+<?php
+
+namespace {{ namespace }};
+
+use NagibMahfuj\Crud\CrudController;
+
+class {{ class }} extends CrudController
+{
+	protected function resourceConfig(): array
+	{
+		return [
+			'model'         => \App\Models\{{ model }}::class,
+			'resource_name' => '{{ resourceName }}',
+			'route_prefix'  => '{{ routePrefix }}',
+			'page_prefix'   => '{{ pagePrefix }}',
+			'per_page'      => 10,
+			'searchable'    => [{{ searchable }}],
+			'actions'       => ['create', 'edit', 'delete'],
+			'columns'       => [
+{{ columns }}
+			],
+			'filters' => [],
+			'fields'  => [
+{{ fields }}
+			],
+		];
+	}
+}

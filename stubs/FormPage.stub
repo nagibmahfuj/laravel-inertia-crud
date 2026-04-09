@@ -1,0 +1,21 @@
+import ResourceForm from '@/components/crud/ResourceForm';
+
+export default function Form(props: any) {
+    const isEdit = props.mode === 'edit';
+    const route = isEdit
+        ? `/dashboard/{{ routePrefix }}/${props.record?.id}`
+        : '/dashboard/{{ routePrefix }}';
+
+    return (
+        <ResourceForm
+            {...props}
+            submitRoute={route}
+            indexRoute="/dashboard/{{ routePrefix }}"
+            breadcrumbs={[
+                { title: 'Dashboard', href: '/dashboard' },
+                { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
+                { title: isEdit ? 'Edit' : 'Create', href: '' },
+            ]}
+        />
+    );
+}

@@ -1,0 +1,16 @@
+import ResourceIndex from '@/components/crud/ResourceIndex';
+
+export default function Index(props: any) {
+    return (
+        <ResourceIndex
+            {...props}
+            title="{{ modelPlural }}"
+            baseRoute="/dashboard/{{ routePrefix }}"
+            exportRoute="/dashboard/{{ routePrefix }}/export"
+            breadcrumbs={[
+                { title: 'Dashboard', href: '/dashboard' },
+                { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
+            ]}
+        />
+    );
+}

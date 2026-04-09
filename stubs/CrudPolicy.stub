@@ -1,0 +1,13 @@
+<?php
+
+namespace {{ namespace }};
+
+use NagibMahfuj\Crud\BaseCrudPolicy;
+
+class {{ class }} extends BaseCrudPolicy
+{
+	protected function resourceKey(): string
+	{
+		return '{{ resourceKey }}';
+	}
+}

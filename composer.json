@@ -1,0 +1,61 @@
+{
+    "name": "nagibmahfuj/laravel-inertia-crud",
+    "description": "Config-driven CRUD scaffolding for Laravel + Inertia.js (React/TypeScript) with interactive generator, built-in search, filters, sorting, export, import, and role-based permissions.",
+    "keywords": [
+        "laravel",
+        "inertia",
+        "crud",
+        "react",
+        "typescript",
+        "admin",
+        "dashboard",
+        "generator",
+        "scaffolding"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nagib Mahfuj",
+            "email": "nagibmahfuj@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/http": "^11.0|^12.0|^13.0",
+        "illuminate/routing": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0",
+        "inertiajs/inertia-laravel": "^1.0|^2.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "pestphp/pest": "^3.0"
+    },
+    "suggest": {
+        "spatie/laravel-permission": "For role-based permission resolution via Spatie's HasRoles trait"
+    },
+    "autoload": {
+        "psr-4": {
+            "NagibMahfuj\\Crud\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NagibMahfuj\\Crud\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NagibMahfuj\\Crud\\CrudServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true
+    }
+}
