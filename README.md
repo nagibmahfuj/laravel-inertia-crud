@@ -537,7 +537,7 @@ class HandleInertiaRequests extends Middleware
 Inertia v3 typically moves the `Toaster` to `app.tsx`. Please follow below code:
 
 ```tsx
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { createInertiaApp } from "@inertiajs/react";
 import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
 
@@ -570,7 +570,7 @@ applyCustomTheme();
 For older Inertia versions, you can use the following code:
 
 ```tsx
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { createInertiaApp } from "@inertiajs/react";
 import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
 
@@ -605,7 +605,7 @@ To trigger toasts from Laravel session flash messages, add this listener to your
 ```tsx
 import { usePage } from "@inertiajs/react";
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/sonner";
 
 export default function AppLayout({ children }) {
   const { flash } = usePage().props as any;
