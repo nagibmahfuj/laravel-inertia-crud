@@ -414,6 +414,32 @@ The package auto-detects `spatie/laravel-permission`. If installed, it uses `$us
 composer require spatie/laravel-permission
 ```
 
+> [!NOTE]
+> If you are not using `spatie/laravel-permission` or any other role management package, by default the package will check for a `role` column in the `users` table.
+
+If you don't have a `role` column in the `users` table, please add it to the `users` table following the migration below:
+
+```php
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            //...
+            $table->string('role')->default('viewer');
+            // ...
+        });
+    }
+    //...
+};
+```
+
 ### Custom Role Resolver
 
 If you have a custom role system, implement the `RoleResolver` interface:
