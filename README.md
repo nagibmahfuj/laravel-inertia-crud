@@ -647,6 +647,7 @@ Thank you for considering contributing to the `laravel-inertia-crud` package! We
    Link the package to a local Laravel application for testing:
    ```json
    // In your Laravel app's composer.json:
+   "minimum-stability": "dev",
    "repositories": [
        {
            "type": "path",
