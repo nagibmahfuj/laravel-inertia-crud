@@ -460,19 +460,21 @@ Or via config:
 
 ### Runtime Theme Application
 
-In your layout (e.g., `AppLayout.tsx`), call `applyCustomTheme` inside a `useEffect`:
+In your project entry (e.g., `app.tsx`), call `applyCustomTheme` in the bottom:
 
 ```typescript
-import { useEffect } from 'react';
-import { applyCustomTheme, customThemeColors } from '@/lib/crud-theme';
+import { Toaster } from "@/components/ui/sonner";
+import { createInertiaApp } from "@inertiajs/react";
+import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
 
-export default function AppLayout({ children }) {
-    useEffect(() => {
-        applyCustomTheme(customThemeColors);
-    }, []);
+createInertiaApp({
+  // ...
+});
 
-    return <>{children}</>;
-}
+// ...
+
+// Apply the custom theme
+applyCustomTheme();
 ```
 
 ---
