@@ -26,13 +26,13 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 
 ## 📋 Requirements
 
-| Dependency | Version |
-|---|---|
-| PHP | ^8.2 |
-| Laravel | 11.x, 12.x, or 13.x |
+| Dependency | Version             |
+| ---------- | ------------------- |
+| PHP        | ^8.2                |
+| Laravel    | 11.x, 12.x, or 13.x |
 | Inertia.js | ^1.0, ^2.0, or ^3.0 |
-| React | 18+ / 19+ |
-| Node.js | 18+ |
+| React      | 18+ / 19+           |
+| Node.js    | 18+                 |
 
 ### Frontend Prerequisites
 
@@ -72,22 +72,32 @@ php artisan vendor:publish --tag=crud-assets
 ```
 
 This publishes:
+
 - `resources/js/components/crud/` — All React components (ResourceIndex, ResourceForm, FormField, FilterBar, DataTable, etc.)
 - `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
 - `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
 
-### 4. Install required shadcn/ui components (if not already installed)
-
-```bash
-npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu
-```
-
-### 5. Install npm dependencies (if not already installed)
+### 4. Install npm dependencies (if not already installed)
 
 ```bash
 npm install date-fns lodash react-day-picker
 npm install -D @types/lodash
 ```
+
+### 5. Install required shadcn/ui components (if not already installed)
+
+```bash
+npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu textarea
+```
+
+> [!NOTE]
+> If you get installation error for shadcn/ui components, please follow below steps:
+
+- Destroy any rogue pnpm lock or workspace files in your current directory `rm -f pnpm-lock.yaml pnpm-workspace.yaml`
+
+- Hardcode 'npm' as your package manager inside package.json `npm pkg set packageManager="npm@10.8.0"`
+
+- Now run the shadcn command again!
 
 ---
 
@@ -126,17 +136,17 @@ php artisan crud:generate --model=Product --all --controller-namespace="App\Http
 
 ### All CLI Options
 
-| Option | Description |
-|---|---|
-| `--model`, `-M` | Model class name (e.g., `Product`) |
-| `--route-prefix` | Route URL prefix (e.g., `products`) |
-| `--page-prefix` | Inertia page directory (e.g., `Dashboard/Products`) |
-| `--controller-namespace` | Controller namespace |
-| `--policy` | Also generate a policy |
-| `--pages` | Also generate Inertia TSX pages |
-| `--permissions` | Also add entry to crud config |
-| `--all` | Generate everything (controller + policy + pages + config) |
-| `--force` | Overwrite existing files |
+| Option                   | Description                                                |
+| ------------------------ | ---------------------------------------------------------- |
+| `--model`, `-M`          | Model class name (e.g., `Product`)                         |
+| `--route-prefix`         | Route URL prefix (e.g., `products`)                        |
+| `--page-prefix`          | Inertia page directory (e.g., `Dashboard/Products`)        |
+| `--controller-namespace` | Controller namespace                                       |
+| `--policy`               | Also generate a policy                                     |
+| `--pages`                | Also generate Inertia TSX pages                            |
+| `--permissions`          | Also add entry to crud config                              |
+| `--all`                  | Generate everything (controller + policy + pages + config) |
+| `--force`                | Overwrite existing files                                   |
 
 ---
 
@@ -301,6 +311,7 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 ```
 
 The `Route::crudResource()` macro registers:
+
 - Standard `Route::resource()` routes (index, create, store, show, edit, update, destroy)
 - `GET products/export` → `ProductController@export` (if method exists)
 - `POST products/import` → `ProductController@import` (if method exists)
@@ -310,47 +321,47 @@ The `Route::crudResource()` macro registers:
 **`resources/js/Pages/Dashboard/Products/Index.tsx`**
 
 ```tsx
-import ResourceIndex from '@/components/crud/ResourceIndex';
+import ResourceIndex from "@/components/crud/ResourceIndex";
 
 export default function Index(props: any) {
-    return (
-        <ResourceIndex
-            {...props}
-            title="Products"
-            baseRoute="/dashboard/products"
-            exportRoute="/dashboard/products/export"
-            breadcrumbs={[
-                { title: 'Dashboard', href: '/dashboard' },
-                { title: 'Products', href: '/dashboard/products' },
-            ]}
-        />
-    );
+  return (
+    <ResourceIndex
+      {...props}
+      title="Products"
+      baseRoute="/dashboard/products"
+      exportRoute="/dashboard/products/export"
+      breadcrumbs={[
+        { title: "Dashboard", href: "/dashboard" },
+        { title: "Products", href: "/dashboard/products" },
+      ]}
+    />
+  );
 }
 ```
 
 **`resources/js/Pages/Dashboard/Products/Form.tsx`**
 
 ```tsx
-import ResourceForm from '@/components/crud/ResourceForm';
+import ResourceForm from "@/components/crud/ResourceForm";
 
 export default function Form(props: any) {
-    const isEdit = props.mode === 'edit';
-    const route = isEdit
-        ? `/dashboard/products/${props.record?.id}`
-        : '/dashboard/products';
+  const isEdit = props.mode === "edit";
+  const route = isEdit
+    ? `/dashboard/products/${props.record?.id}`
+    : "/dashboard/products";
 
-    return (
-        <ResourceForm
-            {...props}
-            submitRoute={route}
-            indexRoute="/dashboard/products"
-            breadcrumbs={[
-                { title: 'Dashboard', href: '/dashboard' },
-                { title: 'Products', href: '/dashboard/products' },
-                { title: isEdit ? 'Edit' : 'Create', href: '' },
-            ]}
-        />
-    );
+  return (
+    <ResourceForm
+      {...props}
+      submitRoute={route}
+      indexRoute="/dashboard/products"
+      breadcrumbs={[
+        { title: "Dashboard", href: "/dashboard" },
+        { title: "Products", href: "/dashboard/products" },
+        { title: isEdit ? "Edit" : "Create", href: "" },
+      ]}
+    />
+  );
 }
 ```
 
@@ -459,7 +470,7 @@ export default function AppLayout({ children }) {
     useEffect(() => {
         applyCustomTheme(customThemeColors);
     }, []);
-    
+
     return <>{children}</>;
 }
 ```
@@ -476,17 +487,19 @@ When generating pages for v3, define the layout as a functional property on your
 
 ```tsx
 // Index.tsx
-import ResourceIndex from '@/components/crud/ResourceIndex';
-import AppLayout from '@/layouts/app-layout';
+import ResourceIndex from "@/components/crud/ResourceIndex";
+import AppLayout from "@/layouts/app-layout";
 
 export default function Index(props: any) {
-    return <ResourceIndex {...props} title="Users" baseRoute="/dashboard/users" />;
+  return (
+    <ResourceIndex {...props} title="Users" baseRoute="/dashboard/users" />
+  );
 }
 
 Index.layout = (page: any) => (
-    <AppLayout breadcrumbs={[{ title: 'Users', href: '/dashboard/users' }]}>
-        {page}
-    </AppLayout>
+  <AppLayout breadcrumbs={[{ title: "Users", href: "/dashboard/users" }]}>
+    {page}
+  </AppLayout>
 );
 ```
 
@@ -495,23 +508,23 @@ Index.layout = (page: any) => (
 Inertia v3 typically moves the `Toaster` to `app.tsx`. To trigger toasts from Laravel session flash messages, add this listener to your `AppLayout`:
 
 ```tsx
-import { usePage } from '@inertiajs/react';
-import { useEffect } from 'react';
-import { toast } from 'sonner';
+import { usePage } from "@inertiajs/react";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 export default function AppLayout({ children }) {
-    const { flash } = usePage().props as any;
+  const { flash } = usePage().props as any;
 
-    useEffect(() => {
-        if (flash?.success) {
-            toast.success(flash.success, { id: flash.success });
-        }
-        if (flash?.error) {
-            toast.error(flash.error, { id: flash.error });
-        }
-    }, [flash]);
+  useEffect(() => {
+    if (flash?.success) {
+      toast.success(flash.success, { id: flash.success });
+    }
+    if (flash?.error) {
+      toast.error(flash.error, { id: flash.error });
+    }
+  }, [flash]);
 
-    return <>{children}</>;
+  return <>{children}</>;
 }
 ```
 
@@ -521,13 +534,13 @@ export default function AppLayout({ children }) {
 
 Each column in the `columns` array supports:
 
-| Key | Type | Description |
-|---|---|---|
-| `key` | `string` | Model attribute or dot-notation path (e.g., `category.name`) |
-| `label` | `string` | Column header text |
-| `sortable` | `bool` | Whether the column is sortable |
-| `type` | `string` | Display type: `text`, `number`, `badge`, `datetime`, `boolean` |
-| `export_format` | `callable` | Custom CSV export formatter: `fn($record) => $record->name` |
+| Key              | Type       | Description                                                               |
+| ---------------- | ---------- | ------------------------------------------------------------------------- |
+| `key`            | `string`   | Model attribute or dot-notation path (e.g., `category.name`)              |
+| `label`          | `string`   | Column header text                                                        |
+| `sortable`       | `bool`     | Whether the column is sortable                                            |
+| `type`           | `string`   | Display type: `text`, `number`, `badge`, `datetime`, `boolean`            |
+| `export_format`  | `callable` | Custom CSV export formatter: `fn($record) => $record->name`               |
 | `display_format` | `callable` | Custom display formatter (applied server-side before sending to frontend) |
 
 ---
@@ -536,21 +549,21 @@ Each column in the `columns` array supports:
 
 Each field in the `fields` array supports:
 
-| Key | Type | Description |
-|---|---|---|
-| `key` | `string` | Form field name / model attribute |
-| `label` | `string` | Field label |
-| `type` | `string` | Field type (see below) |
-| `rules` | `string\|array` | Validation rules (Laravel syntax) |
-| `rules_update` | `string\|array` | Override rules for update action |
-| `required` | `bool` | Show required indicator in UI |
-| `optional_on_update` | `bool` | Replace `required` with `sometimes` on update |
-| `options` | `array` | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]` |
-| `hide_on_create` | `bool` | Hide this field on the create form |
-| `hide_on_edit` | `bool` | Hide this field on the edit form |
-| `hidden` | `bool` | Hide on both forms |
-| `ignore_on_save` | `bool` | Don't set this attribute when saving the model |
-| `placeholder` | `string` | Input placeholder text |
+| Key                  | Type            | Description                                                       |
+| -------------------- | --------------- | ----------------------------------------------------------------- |
+| `key`                | `string`        | Form field name / model attribute                                 |
+| `label`              | `string`        | Field label                                                       |
+| `type`               | `string`        | Field type (see below)                                            |
+| `rules`              | `string\|array` | Validation rules (Laravel syntax)                                 |
+| `rules_update`       | `string\|array` | Override rules for update action                                  |
+| `required`           | `bool`          | Show required indicator in UI                                     |
+| `optional_on_update` | `bool`          | Replace `required` with `sometimes` on update                     |
+| `options`            | `array`         | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]` |
+| `hide_on_create`     | `bool`          | Hide this field on the create form                                |
+| `hide_on_edit`       | `bool`          | Hide this field on the edit form                                  |
+| `hidden`             | `bool`          | Hide on both forms                                                |
+| `ignore_on_save`     | `bool`          | Don't set this attribute when saving the model                    |
+| `placeholder`        | `string`        | Input placeholder text                                            |
 
 ### Supported Field Types
 
@@ -562,16 +575,16 @@ Each field in the `fields` array supports:
 
 Each filter in the `filters` array supports:
 
-| Key | Type | Description |
-|---|---|---|
-| `key` | `string` | Filter key (used as URL param: `filter_{key}`) |
-| `label` | `string` | Filter label |
-| `type` | `string` | `select`, `boolean`, `date`, `date_range` |
-| `column` | `string` | Database column (defaults to `key`) |
-| `options` | `array` | Options for select filters |
-| `multi` | `bool` | Allow multi-select |
-| `relation` | `string` | Filter via a relationship |
-| `separator` | `string` | Custom separator for multi-select URL values |
+| Key         | Type     | Description                                    |
+| ----------- | -------- | ---------------------------------------------- |
+| `key`       | `string` | Filter key (used as URL param: `filter_{key}`) |
+| `label`     | `string` | Filter label                                   |
+| `type`      | `string` | `select`, `boolean`, `date`, `date_range`      |
+| `column`    | `string` | Database column (defaults to `key`)            |
+| `options`   | `array`  | Options for select filters                     |
+| `multi`     | `bool`   | Allow multi-select                             |
+| `relation`  | `string` | Filter via a relationship                      |
+| `separator` | `string` | Custom separator for multi-select URL values   |
 
 ---
 
@@ -691,11 +704,11 @@ Thank you for considering contributing to the `laravel-inertia-crud` package! We
 
 ### How to Contribute
 
-1. **Fork the Repository** 
+1. **Fork the Repository**
    Fork the project to your own GitHub account and clone it to your local machine.
-   
 2. **Set Up a Local Environment**
    Link the package to a local Laravel application for testing:
+
    ```json
    // In your Laravel app's composer.json:
    "minimum-stability": "dev",
@@ -709,10 +722,12 @@ Thank you for considering contributing to the `laravel-inertia-crud` package! We
        "nagibmahfuj/laravel-inertia-crud": "@dev"
    }
    ```
+
    Then run `composer update nagibmahfuj/laravel-inertia-crud` in your Laravel application.
 
 3. **Create a Branch**
    Create a new branch for your feature or bug fix:
+
    ```bash
    git checkout -b feature/my-awesome-feature
    ```
@@ -724,6 +739,7 @@ Thank you for considering contributing to the `laravel-inertia-crud` package! We
 
 5. **Run Tests**
    Ensure your changes don't break existing functionality.
+
    ```bash
    composer test
    ```
@@ -732,6 +748,7 @@ Thank you for considering contributing to the `laravel-inertia-crud` package! We
    Push your branch to GitHub and submit a PR against the `main` branch. Provide a clear description of what the PR accomplishes.
 
 ### Code Style
+
 - Follow **PSR-12** coding standards for PHP.
 - For frontend scaffolding, follow standardized **TypeScript/React** patterns and ensure Tailwind CSS compatibility.
 
@@ -746,6 +763,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 ## 👤 Author
 
 **Nagib Mahfuj**
+
 - GitHub: [@nagibmahfuj](https://github.com/nagibmahfuj)
 
 ---
