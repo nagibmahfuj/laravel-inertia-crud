@@ -799,6 +799,73 @@ Stubs are saved to `stubs/crud/` and will be used instead of the package default
 
 ---
 
+## 🧭 Dynamic Navigation
+
+The package provides a `NavBuilder` support class and a `useNavGroups` React hook to easily build a sidebar that updates dynamically based on user permissions (policies).
+
+### 1. Build Navigation (Backend)
+
+In your `HandleInertiaRequests.php` middleware, use the `NavBuilder` to filter your navigation structure:
+
+```php
+use NagibMahfuj\Crud\Support\NavBuilder;
+use App\Models\User;
+use App\Models\Product;
+
+public function share(Request $request): array
+{
+    return array_merge(parent::share($request), [
+        'navGroups' => fn () => NavBuilder::filter([
+            [
+                'title' => 'General',
+                'items' => [
+                    ['title' => 'Dashboard', 'href' => '/dashboard', 'icon' => 'LayoutGrid'],
+                ],
+            ],
+            [
+                'title' => 'Management',
+                'items' => [
+                    // Item will only be visible if Gate::allows('viewAny', new User())
+                    ['title' => 'Users', 'href' => '/dashboard/users', 'icon' => 'Users', 'permission' => User::class],
+                    ['title' => 'Products', 'href' => '/dashboard/products', 'icon' => 'Package', 'permission' => Product::class],
+                ],
+            ],
+        ], $request->user()),
+    ]);
+}
+```
+
+### 2. Publish the Hook (Frontend)
+
+```bash
+php artisan vendor:publish --tag=crud-assets
+```
+
+This will publish `resources/js/hooks/use-nav-items.ts` to your project.
+
+### 3. Use in Sidebar
+
+In your `Sidebar` component (e.g., `app-sidebar.tsx`), use the hook to render the groups:
+
+```tsx
+import { useNavGroups } from '@/hooks/use-nav-items';
+import { NavMain } from '@/components/nav-main';
+
+export function AppSidebar() {
+    const navGroups = useNavGroups();
+
+    return (
+        <SidebarContent>
+            {navGroups.map((group) => (
+                <NavMain key={group.title} title={group.title} items={group.items} />
+            ))}
+        </SidebarContent>
+    );
+}
+```
+
+---
+
 ## 🔄 Migration Guide (From Inline to Package)
 
 If you're migrating from the inline `CrudController`/`CrudService` to this package:
