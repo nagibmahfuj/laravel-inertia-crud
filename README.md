@@ -30,8 +30,8 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 |---|---|
 | PHP | ^8.2 |
 | Laravel | 11.x, 12.x, or 13.x |
-| Inertia.js | 1.x or 2.x |
-| React | 18+ |
+| Inertia.js | ^1.0, ^2.0, or ^3.0 |
+| React | 18+ / 19+ |
 | Node.js | 18+ |
 
 ### Frontend Prerequisites
@@ -447,21 +447,72 @@ Or via config:
 
 ---
 
-## 🎨 Theming
+### Runtime Theme Application
 
-After publishing, customize `resources/js/lib/crud-theme.ts`:
+In your layout (e.g., `AppLayout.tsx`), call `applyCustomTheme` inside a `useEffect`:
 
 ```typescript
-export const customThemeColors = {
-    primary: '#E4252F',              // Your brand color
-    sidebarBackground: 'oklch(0.205 0 0)',
-    sidebarForeground: 'oklch(0.985 0 0)',
-    // ... more sidebar variables
-};
-
-// Call once in your app entry point:
+import { useEffect } from 'react';
 import { applyCustomTheme, customThemeColors } from '@/lib/crud-theme';
-applyCustomTheme(customThemeColors);
+
+export default function AppLayout({ children }) {
+    useEffect(() => {
+        applyCustomTheme(customThemeColors);
+    }, []);
+    
+    return <>{children}</>;
+}
+```
+
+---
+
+## ⚡ Inertia v3 Integration
+
+Inertia v3 introduces a structural change. Our components no longer hardcode `<AppLayout>` internal wrappers to avoid layout duplication when using v3's global layouts.
+
+### 1. Persistent Layout Pattern
+
+When generating pages for v3, define the layout as a functional property on your page component:
+
+```tsx
+// Index.tsx
+import ResourceIndex from '@/components/crud/ResourceIndex';
+import AppLayout from '@/layouts/app-layout';
+
+export default function Index(props: any) {
+    return <ResourceIndex {...props} title="Users" baseRoute="/dashboard/users" />;
+}
+
+Index.layout = (page: any) => (
+    <AppLayout breadcrumbs={[{ title: 'Users', href: '/dashboard/users' }]}>
+        {page}
+    </AppLayout>
+);
+```
+
+### 2. Toast Integration (Flash Messages)
+
+Inertia v3 typically moves the `Toaster` to `app.tsx`. To trigger toasts from Laravel session flash messages, add this listener to your `AppLayout`:
+
+```tsx
+import { usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
+
+export default function AppLayout({ children }) {
+    const { flash } = usePage().props as any;
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success, { id: flash.success });
+        }
+        if (flash?.error) {
+            toast.error(flash.error, { id: flash.error });
+        }
+    }, [flash]);
+
+    return <>{children}</>;
+}
 ```
 
 ---
