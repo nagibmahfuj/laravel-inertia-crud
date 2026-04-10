@@ -21,7 +21,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import AppLayout from '@/layouts/app-layout';
+
 import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -455,7 +455,7 @@ export default function ResourceIndex({
     ];
 
     return (
-        <AppLayout breadcrumbs={defaultBreadcrumbs}>
+        <>
             <Head title={resourceName} />
             <div className="flex flex-1 flex-col gap-4 p-4 sm:gap-6">
                 <PageHeader title={resourceName} actions={headerActionsList}>
@@ -528,6 +528,6 @@ export default function ResourceIndex({
                     </DialogContent>
                 </Dialog>
             )}
-        </AppLayout>
+        </>
     );
 }

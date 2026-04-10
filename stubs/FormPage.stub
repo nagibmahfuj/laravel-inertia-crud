@@ -1,4 +1,5 @@
 import ResourceForm from '@/components/crud/ResourceForm';
+import AppLayout from '@/layouts/app-layout';
 
 export default function Form(props: any) {
     const isEdit = props.mode === 'edit';
@@ -11,11 +12,21 @@ export default function Form(props: any) {
             {...props}
             submitRoute={route}
             indexRoute="/dashboard/{{ routePrefix }}"
+        />
+    );
+}
+
+Form.layout = (page: any) => {
+    const isEdit = page.props.mode === 'edit';
+    return (
+        <AppLayout
             breadcrumbs={[
                 { title: 'Dashboard', href: '/dashboard' },
                 { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
                 { title: isEdit ? 'Edit' : 'Create', href: '' },
             ]}
-        />
+        >
+            {page}
+        </AppLayout>
     );
-}
+};

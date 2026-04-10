@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+
 import { FormField, type FieldConfig } from '@/components/crud/FormField';
 import { Button } from '@/components/ui/button';
 import type { BreadcrumbItem } from '@/types';
@@ -81,7 +81,7 @@ export default function ResourceForm({
     ];
 
     return (
-        <AppLayout breadcrumbs={defaultBreadcrumbs}>
+        <>
             <Head title={pageTitle} />
             <div className="py-12">
                 <div className="mx-auto max-w-3xl sm:px-6 lg:px-8">
@@ -134,6 +134,6 @@ export default function ResourceForm({
                     </div>
                 </div>
             </div>
-        </AppLayout>
+        </>
     );
 }

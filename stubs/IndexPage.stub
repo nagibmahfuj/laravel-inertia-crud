@@ -1,4 +1,5 @@
 import ResourceIndex from '@/components/crud/ResourceIndex';
+import AppLayout from '@/layouts/app-layout';
 
 export default function Index(props: any) {
     return (
@@ -7,10 +8,17 @@ export default function Index(props: any) {
             title="{{ modelPlural }}"
             baseRoute="/dashboard/{{ routePrefix }}"
             exportRoute="/dashboard/{{ routePrefix }}/export"
-            breadcrumbs={[
-                { title: 'Dashboard', href: '/dashboard' },
-                { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
-            ]}
         />
     );
 }
+
+Index.layout = (page: any) => (
+    <AppLayout
+        breadcrumbs={[
+            { title: 'Dashboard', href: '/dashboard' },
+            { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
+        ]}
+    >
+        {page}
+    </AppLayout>
+);
