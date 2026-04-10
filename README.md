@@ -74,7 +74,7 @@ php artisan vendor:publish --tag=crud-assets
 This publishes:
 - `resources/js/components/crud/` — All React components (ResourceIndex, ResourceForm, FormField, FilterBar, DataTable, etc.)
 - `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
-- `resources/js/lib/crud-utils.ts` — Utility functions (`cn`, `toUrl`)
+- `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
 
 ### 4. Install required shadcn/ui components (if not already installed)
 

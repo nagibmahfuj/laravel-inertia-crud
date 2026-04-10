@@ -112,14 +112,14 @@ class CrudServiceProvider extends ServiceProvider
 		// Theme & utilities
 		$this->publishes([
 			__DIR__ . '/../resources/js/lib/theme.ts' => resource_path('js/lib/crud-theme.ts'),
-			__DIR__ . '/../resources/js/lib/utils.ts'  => resource_path('js/lib/crud-utils.ts'),
+
 		], 'crud-lib');
 
 		// All frontend assets at once
 		$this->publishes([
 			__DIR__ . '/../resources/js/components/crud' => resource_path('js/components/crud'),
 			__DIR__ . '/../resources/js/lib/theme.ts'     => resource_path('js/lib/crud-theme.ts'),
-			__DIR__ . '/../resources/js/lib/utils.ts'      => resource_path('js/lib/crud-utils.ts'),
+
 		], 'crud-assets');
 
 		// Stubs
