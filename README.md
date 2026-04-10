@@ -634,6 +634,57 @@ composer test
 
 ---
 
+## 🤝 Contributing
+
+Thank you for considering contributing to the `laravel-inertia-crud` package! We welcome all contributions, including bug reports, feature requests, and pull requests.
+
+### How to Contribute
+
+1. **Fork the Repository** 
+   Fork the project to your own GitHub account and clone it to your local machine.
+   
+2. **Set Up a Local Environment**
+   Link the package to a local Laravel application for testing:
+   ```json
+   // In your Laravel app's composer.json:
+   "repositories": [
+       {
+           "type": "path",
+           "url": "../path-to-your-fork/laravel-inertia-crud"
+       }
+   ],
+   "require": {
+       "nagibmahfuj/laravel-inertia-crud": "@dev"
+   }
+   ```
+   Then run `composer update nagibmahfuj/laravel-inertia-crud` in your Laravel application.
+
+3. **Create a Branch**
+   Create a new branch for your feature or bug fix:
+   ```bash
+   git checkout -b feature/my-awesome-feature
+   ```
+
+4. **Make Your Changes**
+   - Write clear, understandable code.
+   - If adding new React components, ensure they are designed as publishable stubs that use `shadcn/ui`.
+   - Update the `README.md` if you introduce new configuration options or commands.
+
+5. **Run Tests**
+   Ensure your changes don't break existing functionality.
+   ```bash
+   composer test
+   ```
+
+6. **Submit a Pull Request**
+   Push your branch to GitHub and submit a PR against the `main` branch. Provide a clear description of what the PR accomplishes.
+
+### Code Style
+- Follow **PSR-12** coding standards for PHP.
+- For frontend scaffolding, follow standardized **TypeScript/React** patterns and ensure Tailwind CSS compatibility.
+
+---
+
 ## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
