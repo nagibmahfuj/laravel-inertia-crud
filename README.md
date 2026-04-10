@@ -505,7 +505,102 @@ Index.layout = (page: any) => (
 
 ### 2. Toast Integration (Flash Messages)
 
-Inertia v3 typically moves the `Toaster` to `app.tsx`. To trigger toasts from Laravel session flash messages, add this listener to your `AppLayout`:
+First of all update `app/Http/Middleware/HandleInertiaRequests.php` to share flash messages:
+
+```php
+<?php
+
+namespace App\Http\Middleware;
+
+use Closure;
+use Illuminate\Http\Request;
+use Inertia\Middleware;
+
+class HandleInertiaRequests extends Middleware
+{
+    //...
+
+    public function share(Request $request): array
+    {
+        return array_merge(parent::share($request), [
+            //...
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error'   => fn () => $request->session()->get('error'),
+                'data'    => fn () => $request->session()->get('data'),
+            ],
+        ]);
+    }
+}
+```
+
+Inertia v3 typically moves the `Toaster` to `app.tsx`. Please follow below code:
+
+```tsx
+import { Toaster } from "sonner";
+import { createInertiaApp } from "@inertiajs/react";
+import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
+
+createInertiaApp({
+  // ...
+  withApp(app) {
+    // ...
+    return (
+      <AnyWrapper>
+        {app}
+        {/* Add this line */}
+        <Toaster {...theme.toast} />
+      </AnyWrapper>
+    );
+  },
+  // ...
+  progress: {
+    // Add this line
+    color: customThemeColors.primary,
+  },
+  // ...
+});
+
+// ...
+
+// Apply the custom theme
+applyCustomTheme();
+```
+
+For older Inertia versions, you can use the following code:
+
+```tsx
+import { Toaster } from "sonner";
+import { createInertiaApp } from "@inertiajs/react";
+import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
+
+createInertiaApp({
+  // ...
+  setup({ el, App, props }) {
+    const root = createRoot(el);
+
+    root.render(
+      <AnyWrapper>
+        {app}
+        {/* Add this line */}
+        <Toaster {...theme.toast} />
+      </AnyWrapper>,
+    );
+  },
+  progress: {
+    // Add this line
+    color: customThemeColors.primary,
+  },
+  // ...
+});
+
+// ...
+
+// Apply the custom theme
+applyCustomTheme();
+```
+
+To trigger toasts from Laravel session flash messages, add this listener to your `AppLayout`:
 
 ```tsx
 import { usePage } from "@inertiajs/react";
