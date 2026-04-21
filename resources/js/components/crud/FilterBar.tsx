@@ -11,6 +11,7 @@ import { Search, X } from 'lucide-react';
 import { DataTableFacetedFilter } from './DataTableFacetedFilter';
 import { DatePicker } from './DatePicker';
 import { DatePickerWithRange } from './DatePickerWithRange';
+import { useState, useEffect } from 'react';
 
 export interface FilterConfig {
     key: string;
@@ -26,6 +27,7 @@ interface FilterBarProps {
     filters: FilterConfig[];
     values: Record<string, string>;
     onChange: (key: string, value: string) => void;
+    onChangeMany?: (updates: Record<string, string>) => void;
     onReset: () => void;
     // Search support
     search: string;
@@ -38,10 +40,26 @@ export function FilterBar({
     filters,
     values,
     onChange,
+    onChangeMany,
     onReset,
     search,
     onSearch,
 }: FilterBarProps) {
+    const [localSearch, setLocalSearch] = useState(search);
+
+    useEffect(() => {
+        setLocalSearch(search);
+    }, [search]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (localSearch !== search) {
+                onSearch(localSearch);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [localSearch, search, onSearch]);
+
     const hasActiveFilters =
         Object.values(values).some((v) => v && v.length > 0) ||
         search.length > 0;
@@ -62,11 +80,11 @@ export function FilterBar({
     return (
         <div className="flex flex-wrap items-center gap-2">
             <div className="relative w-full lg:max-w-sm lg:flex-1">
-                <Search className="absolute top-2 left-2 h-4 w-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-2 left-2 h-4 w-4" />
                 <Input
                     placeholder="Search..."
-                    value={search}
-                    onChange={(e) => onSearch(e.target.value)}
+                    value={localSearch}
+                    onChange={(e) => setLocalSearch(e.target.value)}
                     className="h-8 pl-8 text-sm"
                 />
             </div>
@@ -150,18 +168,37 @@ export function FilterBar({
                             placeholder={filter.label}
                             value={from && to ? { from, to } : undefined}
                             onChange={(range) => {
-                                if (range) {
-                                    onChange(
-                                        `filter_${filter.key}_from`,
-                                        range.from,
-                                    );
-                                    onChange(
-                                        `filter_${filter.key}_to`,
-                                        range.to,
-                                    );
+                                if (onChangeMany) {
+                                    if (range) {
+                                        onChangeMany({
+                                            [`filter_${filter.key}_from`]:
+                                                range.from,
+                                            [`filter_${filter.key}_to`]:
+                                                range.to,
+                                        });
+                                    } else {
+                                        onChangeMany({
+                                            [`filter_${filter.key}_from`]: '',
+                                            [`filter_${filter.key}_to`]: '',
+                                        });
+                                    }
                                 } else {
-                                    onChange(`filter_${filter.key}_from`, '');
-                                    onChange(`filter_${filter.key}_to`, '');
+                                    if (range) {
+                                        onChange(
+                                            `filter_${filter.key}_from`,
+                                            range.from,
+                                        );
+                                        onChange(
+                                            `filter_${filter.key}_to`,
+                                            range.to,
+                                        );
+                                    } else {
+                                        onChange(
+                                            `filter_${filter.key}_from`,
+                                            '',
+                                        );
+                                        onChange(`filter_${filter.key}_to`, '');
+                                    }
                                 }
                             }}
                         />

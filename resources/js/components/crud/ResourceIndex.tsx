@@ -21,7 +21,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
+import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -145,6 +145,11 @@ export default function ResourceIndex({
     const handleFilterChange = (key: string, value: string) => {
         const val = value === 'all' ? '' : value;
         navigateWithFilters({ [key]: val, page: '1' });
+    };
+
+    const handleFiltersChange = (updates: Record<string, string>) => {
+        const next = { ...updates, page: '1' };
+        navigateWithFilters(next);
     };
 
     const handleFilterReset = () => {
@@ -455,7 +460,7 @@ export default function ResourceIndex({
     ];
 
     return (
-        <>
+        <AppLayout breadcrumbs={defaultBreadcrumbs}>
             <Head title={resourceName} />
             <div className="flex flex-1 flex-col gap-4 p-4 sm:gap-6">
                 <PageHeader title={resourceName} actions={headerActionsList}>
@@ -497,6 +502,7 @@ export default function ResourceIndex({
                             filters={meta.filters}
                             values={currentFilters}
                             onChange={handleFilterChange}
+                            onChangeMany={handleFiltersChange}
                             onReset={handleFilterReset}
                             search={currentFilters.search ?? ''}
                             onSearch={handleSearch}
@@ -528,6 +534,6 @@ export default function ResourceIndex({
                     </DialogContent>
                 </Dialog>
             )}
-        </>
+        </AppLayout>
     );
 }
