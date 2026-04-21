@@ -211,7 +211,7 @@ class ProductController extends CrudController
                     'key'     => 'category_id',
                     'label'   => 'Category',
                     'type'    => 'select',
-                    'multi'   => true,
+                    'multiple'   => true,
                     'options' => [], // Inject dynamically in create()/edit()
                 ],
                 [
@@ -848,19 +848,19 @@ This will publish `resources/js/hooks/use-nav-items.ts` to your project.
 In your `Sidebar` component (e.g., `app-sidebar.tsx`), use the hook to render the groups:
 
 ```tsx
-import { useNavGroups } from '@/hooks/use-nav-items';
-import { NavMain } from '@/components/nav-main';
+import { useNavGroups } from "@/hooks/use-nav-items";
+import { NavMain } from "@/components/nav-main";
 
 export function AppSidebar() {
-    const navGroups = useNavGroups();
+  const navGroups = useNavGroups();
 
-    return (
-        <SidebarContent>
-            {navGroups.map((group) => (
-                <NavMain key={group.title} title={group.title} items={group.items} />
-            ))}
-        </SidebarContent>
-    );
+  return (
+    <SidebarContent>
+      {navGroups.map((group) => (
+        <NavMain key={group.title} title={group.title} items={group.items} />
+      ))}
+    </SidebarContent>
+  );
 }
 ```
 
