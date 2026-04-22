@@ -88,7 +88,7 @@ export function FormField({
                                         newOpts[i] = e.target.value;
                                         onChange(
                                             field.key,
-                                            JSON.stringify(newOpts),
+                                            newOpts,
                                         );
                                     }}
                                     placeholder={`Option ${i + 1}`}
@@ -120,7 +120,7 @@ export function FormField({
                                         );
                                         onChange(
                                             field.key,
-                                            JSON.stringify(newOpts),
+                                            newOpts,
                                         );
                                         if (
                                             String(correctIndex) === String(i)
@@ -146,10 +146,10 @@ export function FormField({
                             onClick={() => {
                                 onChange(
                                     field.key,
-                                    JSON.stringify([
+                                    [
                                         ...opts,
                                         `Option ${opts.length + 1}`,
-                                    ]),
+                                    ],
                                 );
                             }}
                         >
