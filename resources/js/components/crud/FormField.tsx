@@ -1,16 +1,25 @@
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Check, ChevronsUpDown, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 
 export interface FieldConfig {
     key: string;
@@ -86,10 +95,7 @@ export function FormField({
                                     onChange={(e) => {
                                         const newOpts = [...opts];
                                         newOpts[i] = e.target.value;
-                                        onChange(
-                                            field.key,
-                                            newOpts,
-                                        );
+                                        onChange(field.key, newOpts);
                                     }}
                                     placeholder={`Option ${i + 1}`}
                                 />
@@ -118,10 +124,7 @@ export function FormField({
                                             (_: string, idx: number) =>
                                                 idx !== i,
                                         );
-                                        onChange(
-                                            field.key,
-                                            newOpts,
-                                        );
+                                        onChange(field.key, newOpts);
                                         if (
                                             String(correctIndex) === String(i)
                                         ) {
@@ -144,13 +147,10 @@ export function FormField({
                             size="sm"
                             type="button"
                             onClick={() => {
-                                onChange(
-                                    field.key,
-                                    [
-                                        ...opts,
-                                        `Option ${opts.length + 1}`,
-                                    ],
-                                );
+                                onChange(field.key, [
+                                    ...opts,
+                                    `Option ${opts.length + 1}`,
+                                ]);
                             }}
                         >
                             Add Option
@@ -173,57 +173,13 @@ export function FormField({
                 );
 
             case 'select': {
-                let selectValue =
-                    value === null || value === undefined || value === ''
-                        ? 'none'
-                        : String(value);
-                if (
-                    value === '' &&
-                    field.options?.some((o) => String(o.value) === '')
-                ) {
-                    selectValue = '__empty__';
-                }
-
                 return (
-                    <Select
-                        value={selectValue}
-                        onValueChange={(v) => {
-                            if (v === 'none' || v === '__empty__') {
-                                onChange(field.key, '');
-                            } else {
-                                onChange(field.key, v);
-                            }
-                        }}
-                        disabled={field.disabled}
-                    >
-                        <SelectTrigger className="mt-1" id={id}>
-                            <SelectValue
-                                placeholder={
-                                    field.placeholder ?? `Select ${field.label}`
-                                }
-                            />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem
-                                value="none"
-                                className="hidden"
-                                disabled
-                            >
-                                {field.placeholder ?? `Select ${field.label}`}
-                            </SelectItem>
-                            {field.options?.map((opt) => {
-                                const optVal =
-                                    String(opt.value) === ''
-                                        ? '__empty__'
-                                        : String(opt.value);
-                                return (
-                                    <SelectItem key={optVal} value={optVal}>
-                                        {opt.label}
-                                    </SelectItem>
-                                );
-                            })}
-                        </SelectContent>
-                    </Select>
+                    <ComboboxField
+                        field={field}
+                        value={value}
+                        onChange={onChange}
+                        id={id}
+                    />
                 );
             }
 
@@ -421,5 +377,226 @@ export function FormField({
             {renderField()}
             {error && <p className="text-destructive mt-1 text-sm">{error}</p>}
         </div>
+    );
+}
+
+function ComboboxField({
+    field,
+    value,
+    onChange,
+    id,
+}: {
+    field: FieldConfig;
+    value: any;
+    onChange: (key: string, value: any) => void;
+    id: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const isMultiple = !!(field as any).multiple;
+
+    const options = field.options || [];
+
+    if (isMultiple) {
+        const selectedValues = Array.isArray(value) ? value.map(String) : [];
+
+        return (
+            <div className="mt-1 flex flex-col gap-2">
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            id={id}
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-full justify-between font-normal"
+                            disabled={field.disabled}
+                        >
+                            <span className="truncate">
+                                {selectedValues.length > 0
+                                    ? `${selectedValues.length} selected`
+                                    : (field.placeholder ??
+                                      `Select ${field.label}`)}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        className="w-[--radix-popover-trigger-width] p-0"
+                        align="start"
+                    >
+                        <Command>
+                            <CommandInput
+                                placeholder={`Search ${field.label}...`}
+                            />
+                            <CommandList>
+                                <CommandEmpty>No results found.</CommandEmpty>
+                                <CommandGroup>
+                                    {options.map((opt) => {
+                                        const optVal = String(opt.value);
+                                        const isSelected =
+                                            selectedValues.includes(optVal);
+                                        return (
+                                            <CommandItem
+                                                key={optVal}
+                                                value={optVal}
+                                                onSelect={() => {
+                                                    if (isSelected) {
+                                                        onChange(
+                                                            field.key,
+                                                            selectedValues.filter(
+                                                                (v) =>
+                                                                    v !==
+                                                                    optVal,
+                                                            ),
+                                                        );
+                                                    } else {
+                                                        onChange(field.key, [
+                                                            ...selectedValues,
+                                                            optVal,
+                                                        ]);
+                                                    }
+                                                }}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        'mr-2 h-4 w-4',
+                                                        isSelected
+                                                            ? 'opacity-100'
+                                                            : 'opacity-0',
+                                                    )}
+                                                />
+                                                {opt.label}
+                                            </CommandItem>
+                                        );
+                                    })}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+
+                {selectedValues.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                        {selectedValues.map((val) => {
+                            const opt = options.find(
+                                (o) => String(o.value) === val,
+                            );
+                            return (
+                                <Badge
+                                    key={val}
+                                    variant="secondary"
+                                    className="pr-1"
+                                >
+                                    <span className="max-w-[150px] truncate">
+                                        {opt?.label ?? val}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="ml-1 h-4 w-4 rounded-full p-0"
+                                        onClick={() => {
+                                            onChange(
+                                                field.key,
+                                                selectedValues.filter(
+                                                    (v) => v !== val,
+                                                ),
+                                            );
+                                        }}
+                                        disabled={field.disabled}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </Badge>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // Single Select
+    const selectValue =
+        value === null || value === undefined || value === ''
+            ? ''
+            : String(value);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    id={id}
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="mt-1 w-full justify-between font-normal"
+                    disabled={field.disabled}
+                >
+                    <span className="truncate">
+                        {selectValue
+                            ? (options.find(
+                                  (opt) => String(opt.value) === selectValue,
+                              )?.label ?? selectValue)
+                            : (field.placeholder ?? `Select ${field.label}`)}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent
+                className="w-[--radix-popover-trigger-width] p-0"
+                align="start"
+            >
+                <Command>
+                    <CommandInput placeholder={`Search ${field.label}...`} />
+                    <CommandList>
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        <CommandGroup>
+                            <CommandItem
+                                value="__empty__"
+                                onSelect={() => {
+                                    onChange(field.key, '');
+                                    setOpen(false);
+                                }}
+                            >
+                                <Check
+                                    className={cn(
+                                        'mr-2 h-4 w-4',
+                                        selectValue === ''
+                                            ? 'opacity-100'
+                                            : 'opacity-0',
+                                    )}
+                                />
+                                <span className="text-muted-foreground italic">
+                                    None
+                                </span>
+                            </CommandItem>
+                            {options.map((opt) => {
+                                const optVal = String(opt.value);
+                                return (
+                                    <CommandItem
+                                        key={optVal}
+                                        value={optVal}
+                                        onSelect={() => {
+                                            onChange(field.key, optVal);
+                                            setOpen(false);
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                'mr-2 h-4 w-4',
+                                                selectValue === optVal
+                                                    ? 'opacity-100'
+                                                    : 'opacity-0',
+                                            )}
+                                        />
+                                        {opt.label}
+                                    </CommandItem>
+                                );
+                            })}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
     );
 }

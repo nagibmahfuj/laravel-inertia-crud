@@ -38,7 +38,7 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 
 Your Laravel app must have the following installed (standard in Laravel Breeze React/TypeScript starter):
 
-- **shadcn/ui** components: `Button`, `Input`, `Select`, `Label`, `Table`, `Badge`, `Checkbox`, `Dialog`, `Calendar`, `Popover`, `Card`, `Progress`, `Separator`, `DropdownMenu`
+- **shadcn/ui** components: `Button`, `Input`, `Select`, `Label`, `Table`, `Badge`, `Checkbox`, `Dialog`, `Calendar`, `Popover`, `Card`, `Progress`, `Separator`, `DropdownMenu`, `Command`
 - **lucide-react** for icons
 - **date-fns** for date formatting
 - **clsx** + **tailwind-merge** for class merging
@@ -87,7 +87,7 @@ npm install -D @types/lodash
 ### 5. Install required shadcn/ui components (if not already installed)
 
 ```bash
-npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu textarea
+npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu textarea command
 ```
 
 > [!NOTE]
@@ -682,6 +682,7 @@ Each field in the `fields` array supports:
 | `required`           | `bool`          | Show required indicator in UI                                     |
 | `optional_on_update` | `bool`          | Replace `required` with `sometimes` on update                     |
 | `options`            | `array`         | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]` |
+| `multiple`           | `bool`          | Enables multi-select combobox for `select` fields                 |
 | `hide_on_create`     | `bool`          | Hide this field on the create form                                |
 | `hide_on_edit`       | `bool`          | Hide this field on the edit form                                  |
 | `hidden`             | `bool`          | Hide on both forms                                                |
