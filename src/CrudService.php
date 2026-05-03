@@ -78,10 +78,10 @@ class CrudService
 				}
 			} elseif ($type === 'date_range') {
 				if ($request->filled("filter_{$key}_from")) {
-					$query->where($column, '>=', $request->input("filter_{$key}_from"));
+					$query->whereDate($column, '>=', $request->input("filter_{$key}_from"));
 				}
 				if ($request->filled("filter_{$key}_to")) {
-					$query->where($column, '<=', $request->input("filter_{$key}_to"));
+					$query->whereDate($column, '<=', $request->input("filter_{$key}_to"));
 				}
 			} elseif ($type === 'date' && $request->filled("filter_{$key}")) {
 				$query->whereDate($column, $request->input("filter_{$key}"));
