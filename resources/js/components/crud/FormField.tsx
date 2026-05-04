@@ -438,7 +438,7 @@ function ComboboxField({
                                         return (
                                             <CommandItem
                                                 key={optVal}
-                                                value={optVal}
+                                                value={opt.label}
                                                 onSelect={() => {
                                                     if (isSelected) {
                                                         onChange(
@@ -487,7 +487,7 @@ function ComboboxField({
                                     variant="secondary"
                                     className="pr-1"
                                 >
-                                    <span className="max-w-[150px] truncate">
+                                    <span>
                                         {opt?.label ?? val}
                                     </span>
                                     <Button
@@ -575,7 +575,7 @@ function ComboboxField({
                                 return (
                                     <CommandItem
                                         key={optVal}
-                                        value={optVal}
+                                        value={opt.label}
                                         onSelect={() => {
                                             onChange(field.key, optVal);
                                             setOpen(false);
