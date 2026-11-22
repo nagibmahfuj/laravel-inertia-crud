@@ -1,29 +1,26 @@
 # React Components & Types
 
-All frontend assets are published to your application via `php artisan vendor:publish --tag=crud-assets` so you have full ownership and customization freedom.
+All frontend assets are published to your application via `php artisan vendor:publish --tag=crud-assets` (or `php artisan crud:install`) so you fully own and customize them.
 
 ## Published Components (`resources/js/components/crud/`)
 
 | File | Export(s) | Purpose |
 | --- | --- | --- |
-| `ResourceIndex.tsx` | `default` (`ResourceIndex`) | Full config-driven index page with search, filters, sorting, pagination, bulk actions, export, and import modal |
-| `ResourceForm.tsx` | `default` (`ResourceForm`) | Config-driven create/edit form with file upload handling and concurrent chunked-upload state tracking |
-| `FormField.tsx` | `FormField`, `formatDateInput`, `formatDateTimeLocal` | Renders all 15 field types including `select` combobox, `checkbox`/`toggle`, `repeater`, and `chunked-file` |
-| `ChunkedFileInput.tsx` | `default` (`ChunkedFileInput`) | Drag-and-drop chunked uploader with retry logic, progress bar, server cancel cleanup, and edit-mode preview |
-| `DataTable.tsx` | `DataTable` | Paginated shadcn/ui table with per-page selector and First/Prev/Next/Last controls |
-| `FilterBar.tsx` | `FilterBar` | Debounced search input, select/faceted multi-select, boolean, text, date, and date-range filters |
+| `ResourceIndex.tsx` | `default` (`ResourceIndex`) | Full config-driven index with KPI stats, search, filters, SoftDeletes trash controls, custom actions, inline toggles, modal/drawer forms, CSV export, and background import polling |
+| `ResourceForm.tsx` | `default` (`ResourceForm`) | Config-driven create/edit form supporting standalone pages, embedded modal/drawer mode, card sections, 2-column grid, conditional visibility, and concurrent uploads |
+| `ResourceShow.tsx` | `default` (`ResourceShow`) | Config-driven detail view with grouped section cards, formatted field rendering, Edit/Delete header actions, and `fieldOverrides` |
+| `FormField.tsx` | `FormField`, `evaluateVisibleWhen`, `formatDateInput`, `formatDateTimeLocal`, `slugifyText` | Renders all 22 field types including `image`/`file` preview & remove, async `select`, `slug`, `tags`, `radio`, `color`, `key-value`, zero-dependency `rich-text`, `repeater`, and `chunked-file` |
+| `ChunkedFileInput.tsx` | `default` (`ChunkedFileInput`) | Drag-and-drop chunked uploader with retry logic, progress bar, cancel cleanup, and edit-mode preview |
+| `DataTable.tsx` | `DataTable` | Paginated shadcn/ui table with `localStorage`-persisted column visibility toggle, per-page selector, and First/Prev/Next/Last controls |
+| `FilterBar.tsx` | `FilterBar` | Debounced search, SoftDeletes trashed selector, select/faceted multi-select, boolean, text, date, and date-range filters |
+| `FileImport.tsx` | `FileImport` | Standard & chunked CSV uploader with sample template link, live background polling progress, error sample preview, and failed-row CSV download |
+| `BulkActions.tsx` | `BulkActions` | Selection count bar with bulk delete, restore, force-delete, export, and declarative custom bulk actions |
+| `icon-map.ts` | `crudIconMap`, `resolveLucideIcon` | Shared string-to-`LucideIcon` resolver for stats and custom actions |
 | `DataTableFacetedFilter.tsx` | `DataTableFacetedFilter` | Searchable multi-select dropdown filter |
-| `DatePicker.tsx` | `DatePicker` | Single date picker (`react-day-picker` v9/v10 compatible) |
-| `DatePickerWithRange.tsx` | `DatePickerWithRange` | Two-month date range picker |
-| `PageHeader.tsx` | `PageHeader` | Title, optional subtitle, and action buttons |
-| `ExportButton.tsx` | `ExportButton` | Downloads filtered CSV export |
-| `FileImport.tsx` | `FileImport` | Drag/select import uploader with format template link and size check |
-| `BulkActions.tsx` | `BulkActions` | Selection count bar with bulk delete/export triggers |
-| `ConfirmDialog.tsx` | `ConfirmDialog` | Reusable confirmation modal |
-| `StatusBadge.tsx` | `StatusBadge` | Auto-colored semantic status badge |
-| `StatCard.tsx` | `StatCard` | Dashboard KPI summary card |
-| `types.ts` | Shared TypeScript interfaces | `ResourceMeta`, `ResourceRoutes`, `ResourceIndexProps`, `ResourceFormProps`, `ColumnConfig`, `FilterConfig`, `FieldConfig`, `ChunkedUploadedFile`, `ExistingFile`, `CrudBreadcrumbItem`, `PaginatedData` |
-| `index.ts` | Barrel re-exports | Re-exports all components and types from `@/components/crud` |
+| `DatePicker.tsx` / `DatePickerWithRange.tsx` | `DatePicker`, `DatePickerWithRange` | `react-day-picker` v9/v10 compatible date pickers |
+| `PageHeader.tsx`, `ExportButton.tsx`, `ConfirmDialog.tsx`, `StatusBadge.tsx`, `StatCard.tsx` | Named exports | Reusable dashboard building blocks |
+| `types.ts` | Shared TypeScript interfaces | `ResourceMeta`, `ResourceRoutes`, `ResourceIndexProps`, `ResourceFormProps`, `ResourceShowProps`, `ShowFieldConfig`, `StatItem`, `CustomActionConfig`, `ImportProgressState`, `ColumnConfig`, `FilterConfig`, `FieldConfig`, `VisibleWhenRule`, `FormSectionConfig`, `ChunkedUploadedFile`, `ExistingFile`, `CrudBreadcrumbItem`, `PaginatedData` |
+| `index.ts` | Barrel re-exports | Re-exports all components, helpers, and types from `@/components/crud` |
 
 ## Barrel Import Example
 
@@ -31,9 +28,10 @@ All frontend assets are published to your application via `php artisan vendor:pu
 import {
     ResourceIndex,
     ResourceForm,
+    ResourceShow,
     ChunkedFileInput,
     type ResourceIndexProps,
     type ResourceFormProps,
+    type ResourceShowProps,
 } from '@/components/crud';
 ```
-

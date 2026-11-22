@@ -1,0 +1,14 @@
+import ResourceShow from '@/components/crud/ResourceShow';
+import type { ResourceShowProps } from '@/components/crud/types';
+import AppLayout from '@/layouts/app-layout';
+
+export default function Show(props: ResourceShowProps) {
+    return <ResourceShow {...props} />;
+}
+
+Show.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);
+

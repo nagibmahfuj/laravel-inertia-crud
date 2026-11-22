@@ -56,6 +56,16 @@ abstract class BaseCrudPolicy
         return $this->hasDeleteAccess($user);
     }
 
+    public function restore(Authenticatable $user, $model): bool
+    {
+        return $this->hasDeleteAccess($user);
+    }
+
+    public function forceDelete(Authenticatable $user, $model): bool
+    {
+        return $this->hasDeleteAccess($user);
+    }
+
     public function export(Authenticatable $user): bool
     {
         return $this->hasAccess($user);

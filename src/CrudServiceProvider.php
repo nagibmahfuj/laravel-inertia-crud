@@ -5,10 +5,17 @@ namespace NagibMahfuj\Crud;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use NagibMahfuj\Crud\Commands\CrudCleanupChunksCommand;
+use NagibMahfuj\Crud\Commands\CrudDoctorCommand;
 use NagibMahfuj\Crud\Commands\CrudGenerateCommand;
+use NagibMahfuj\Crud\Commands\CrudInstallCommand;
 use NagibMahfuj\Crud\Contracts\RoleResolver;
 use NagibMahfuj\Crud\Http\Controllers\ChunkUploadController;
+use NagibMahfuj\Crud\Http\Controllers\CrudImportController;
+use NagibMahfuj\Crud\Http\Controllers\CrudOptionsController;
 use NagibMahfuj\Crud\Services\ChunkUploadService;
+use NagibMahfuj\Crud\Services\CsvImportService;
+use NagibMahfuj\Crud\Services\FileUploadService;
+use NagibMahfuj\Crud\Services\OptionsService;
 use NagibMahfuj\Crud\Support\EloquentRoleResolver;
 use NagibMahfuj\Crud\Support\SpatieRoleResolver;
 
@@ -22,8 +29,18 @@ class CrudServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/crud.php', 'crud');
 
         $this->app->singleton(ChunkUploadService::class);
+        $this->app->singleton(FileUploadService::class);
+        $this->app->singleton(OptionsService::class);
+        $this->app->singleton(CsvImportService::class, function ($app) {
+            return new CsvImportService($app->make(ChunkUploadService::class));
+        });
         $this->app->singleton(CrudService::class, function ($app) {
-            return new CrudService($app->make(ChunkUploadService::class));
+            return new CrudService(
+                $app->make(ChunkUploadService::class),
+                $app->make(FileUploadService::class),
+                $app->make(OptionsService::class),
+                $app->make(CsvImportService::class),
+            );
         });
 
         $this->registerRoleResolver();
@@ -36,18 +53,14 @@ class CrudServiceProvider extends ServiceProvider
     {
         $this->registerRouteMacros();
         $this->registerChunkUploadRoutes();
+        $this->registerOptionsRoutes();
+        $this->registerImportRoutes();
         $this->registerPublishing();
         $this->registerCommands();
     }
 
     /**
      * Register the role resolver binding.
-     *
-     * Priority:
-     * 1. Custom class from config('crud.role_resolver')
-     * 2. Already bound by the host application
-     * 3. Auto-detect Spatie laravel-permission
-     * 4. Fallback to EloquentRoleResolver
      */
     protected function registerRoleResolver(): void
     {
@@ -85,8 +98,32 @@ class CrudServiceProvider extends ServiceProvider
                 Route::post("{$uri}/import", [$controller, 'import'])->name("{$name}.import");
             }
 
+            if (method_exists($controller, 'importSample')) {
+                Route::get("{$uri}/import-sample", [$controller, 'importSample'])->name("{$name}.import-sample");
+            }
+
             if (method_exists($controller, 'bulkDestroy')) {
                 Route::post("{$uri}/bulk-destroy", [$controller, 'bulkDestroy'])->name("{$name}.bulk-destroy");
+            }
+
+            if (method_exists($controller, 'bulkRestore')) {
+                Route::post("{$uri}/bulk-restore", [$controller, 'bulkRestore'])->name("{$name}.bulk-restore");
+            }
+
+            if (method_exists($controller, 'bulkForceDestroy')) {
+                Route::post("{$uri}/bulk-force-destroy", [$controller, 'bulkForceDestroy'])->name("{$name}.bulk-force-destroy");
+            }
+
+            if (method_exists($controller, 'handleAction')) {
+                Route::post("{$uri}/action/{action}", [$controller, 'handleAction'])->name("{$name}.action");
+            }
+
+            if (method_exists($controller, 'restore')) {
+                Route::post("{$uri}/{id}/restore", [$controller, 'restore'])->name("{$name}.restore");
+            }
+
+            if (method_exists($controller, 'forceDestroy')) {
+                Route::delete("{$uri}/{id}/force", [$controller, 'forceDestroy'])->name("{$name}.force-destroy");
             }
 
             return Route::resource($name, $controller, $options);
@@ -117,6 +154,48 @@ class CrudServiceProvider extends ServiceProvider
     }
 
     /**
+     * Register native async relationship options endpoint when enabled.
+     */
+    protected function registerOptionsRoutes(): void
+    {
+        if (!config('crud.options.enabled', true)) {
+            return;
+        }
+
+        $route      = '/' . ltrim((string) config('crud.options.route', '/crud/options'), '/');
+        $routeName  = (string) config('crud.options.route_name', 'crud.options');
+        $middleware = (array) config('crud.options.middleware', ['web', 'auth']);
+
+        Route::middleware($middleware)
+            ->get($route, [CrudOptionsController::class, 'search'])
+            ->name($routeName);
+    }
+
+    /**
+     * Register native background import status & failed-rows download endpoints.
+     */
+    protected function registerImportRoutes(): void
+    {
+        if (!config('crud.import.enabled', true)) {
+            return;
+        }
+
+        $route      = '/' . ltrim((string) config('crud.import.route', '/crud/imports'), '/');
+        $routeName  = (string) config('crud.import.route_name', 'crud.import');
+        $middleware = (array) config('crud.import.middleware', ['web', 'auth']);
+
+        Route::middleware($middleware)->group(function () use ($route, $routeName) {
+            Route::get("{$route}/{importId}/status", [CrudImportController::class, 'status'])
+                ->where('importId', '[a-zA-Z0-9_\-]+')
+                ->name("{$routeName}.status");
+
+            Route::get("{$route}/{importId}/errors", [CrudImportController::class, 'errors'])
+                ->where('importId', '[a-zA-Z0-9_\-]+')
+                ->name("{$routeName}.errors");
+        });
+    }
+
+    /**
      * Register publishable assets.
      */
     protected function registerPublishing(): void
@@ -125,30 +204,25 @@ class CrudServiceProvider extends ServiceProvider
             return;
         }
 
-        // Config
         $this->publishes([
             __DIR__ . '/../config/crud.php' => config_path('crud.php'),
         ], 'crud-config');
 
-        // React components
         $this->publishes([
             __DIR__ . '/../resources/js/components/crud' => resource_path('js/components/crud'),
         ], 'crud-components');
 
-        // Theme & utilities
         $this->publishes([
             __DIR__ . '/../resources/js/lib/theme.ts' => resource_path('js/lib/crud-theme.ts'),
             __DIR__ . '/../resources/js/hooks'        => resource_path('js/hooks'),
         ], 'crud-lib');
 
-        // All frontend assets at once
         $this->publishes([
             __DIR__ . '/../resources/js/components/crud' => resource_path('js/components/crud'),
             __DIR__ . '/../resources/js/lib/theme.ts'    => resource_path('js/lib/crud-theme.ts'),
             __DIR__ . '/../resources/js/hooks'           => resource_path('js/hooks'),
         ], 'crud-assets');
 
-        // Stubs
         $this->publishes([
             __DIR__ . '/../stubs' => base_path('stubs/crud'),
         ], 'crud-stubs');
@@ -166,6 +240,8 @@ class CrudServiceProvider extends ServiceProvider
         $this->commands([
             CrudGenerateCommand::class,
             CrudCleanupChunksCommand::class,
+            CrudInstallCommand::class,
+            CrudDoctorCommand::class,
         ]);
     }
 }

@@ -1,115 +1,140 @@
-# Form Fields & Validation
+# Form Fields, Layouts & Validation
 
-Define create and edit form inputs alongside their Laravel validation rules inside `resourceConfig()['fields']`.
+Define rich create/edit forms — including 2-column layouts, grouped card sections, conditional visibility, helper text, auto-handled images/files, and async searchable selects — directly in `resourceConfig()['fields']`.
 
-## Field Configuration
+## All 22 Supported Field Types
+
+| Type | Rendered Input | Highlights |
+| --- | --- | --- |
+| `text`, `email`, `password`, `number` | Standard `<Input />` | `password` ignored when empty on update |
+| `textarea` | `<Textarea rows={4} />` | Plain multi-line input |
+| `rich-text` | Zero-dependency Markdown toolbar + Live Preview | Bold, Italic, Heading, Lists, Link, Code + safe preview toggle |
+| `select` | Searchable Combobox (`Command`) | Supports `multiple`, lazy `Closure` options, and signed async `relationship` search |
+| `radio` | Responsive 2-col radio cards | Uses `options` |
+| `checkbox` / `toggle` | Card-styled `<Checkbox />` | Safe boolean coercion + `placeholder` subtitle |
+| `date` / `datetime` | Native date / datetime-local inputs | Timezone-safe formatting & `formatDateTimeLocal()` |
+| `file` | Auto-handled file input with existing file card | Supports `disk`, `directory`, `path_column`, `delete_old`, Download, Replace, Remove |
+| `image` | Auto-handled image uploader with live thumbnail preview | Defaults to `accept="image/*"`, live `URL.createObjectURL` preview, Replace, Remove |
+| `chunked-file` | Drag-and-drop chunked uploader (`/crud/chunk-upload`) | [See Chunked File Uploads](/guide/chunked-uploads) |
+| `slug` | Monospace slug input with auto-sync & Regenerate button | Set `'slug_from' => 'title'` to auto-slugify while typing |
+| `tags` | Interactive chip/tag input | Press Enter or comma to add; Backspace / `×` to remove |
+| `color` | Synchronized color swatch + hex input | Stores `#rrggbb` |
+| `key-value` | Dynamic key/value row editor | Stores associative JSON object |
+| `options-builder` | Dynamic choice list + correct-index toggle | Ideal for quizzes & polls |
+| `repeater` | Nested sub-form rows | Recursive validation rules (`key.*.subkey`) |
+| `hidden` | Not rendered | Preserved in form payload |
+
+---
+
+## Sections, 2-Column Grid, Help Text & Conditional Visibility
 
 ```php
+'form_columns'  => 2,
+'form_sections' => [
+    'Basic'   => ['title' => 'Basic Information', 'description' => 'Core identity and classification.', 'columns' => 2],
+    'Media'   => ['title' => 'Media & Files', 'columns' => 1],
+    'Content' => ['title' => 'Article Content', 'columns' => 1],
+],
 'fields' => [
-    ['key' => 'name',     'label' => 'Full Name', 'type' => 'text',     'rules' => 'required|string|max:255', 'required' => true],
-    ['key' => 'email',    'label' => 'Email',     'type' => 'email',    'rules' => 'required|email|unique:users,email,{id}', 'required' => true],
-    ['key' => 'password', 'label' => 'Password',  'type' => 'password', 'rules' => 'required|min:8', 'optional_on_update' => true],
     [
-        'key'      => 'role',
-        'label'    => 'Role',
-        'type'     => 'select',
-        'rules'    => 'required|in:super_admin,admin,viewer',
+        'key'      => 'title',
+        'label'    => 'Title',
+        'type'     => 'text',
+        'rules'    => 'required|string|max:255',
         'required' => true,
-        'options'  => [
-            ['label' => 'Super Admin', 'value' => 'super_admin'],
-            ['label' => 'Admin',       'value' => 'admin'],
-            ['label' => 'Viewer',      'value' => 'viewer'],
-        ],
+        'section'  => 'Basic',
+        'help'     => 'Displayed on the public landing page.',
     ],
-    ['key' => 'publish_at', 'label' => 'Publish At', 'type' => 'datetime', 'rules' => 'nullable|date'],
-    ['key' => 'is_active',  'label' => 'Active',     'type' => 'checkbox', 'default' => true, 'placeholder' => 'Show in public catalog'],
-    ['key' => 'cover',      'label' => 'Cover Image','type' => 'file',     'accept' => 'image/*', 'rules' => 'nullable|image|max:2048', 'ignore_on_save' => true],
+    [
+        'key'       => 'slug',
+        'label'     => 'URL Slug',
+        'type'      => 'slug',
+        'slug_from' => 'title',
+        'rules'     => 'required|string|unique:articles,slug,{id}',
+        'section'   => 'Basic',
+    ],
+    [
+        'key'          => 'external_url',
+        'label'        => 'External Link',
+        'type'         => 'text',
+        'rules'        => 'nullable|url',
+        'section'      => 'Basic',
+        'col_span'     => 2,
+        'visible_when' => ['field' => 'source_type', 'equals' => 'external'],
+    ],
+    [
+        'key'      => 'body',
+        'label'    => 'Article Body',
+        'type'     => 'rich-text',
+        'rules'    => 'nullable|string',
+        'section'  => 'Content',
+        'col_span' => 2,
+    ],
 ],
 ```
 
-## Supported Field Types
+### Supported `visible_when` Operators
 
-| Type | Input Rendered | Notes |
-| --- | --- | --- |
-| `text` | `<Input type="text" />` | Default fallback type |
-| `email` | `<Input type="email" />` | Standard email input |
-| `password` | `<Input type="password" />` | Ignored on save when blank; pair with `optional_on_update => true` |
-| `number` | `<Input type="number" />` | Numeric input |
-| `textarea` | `<Textarea rows={4} />` | Multi-line text input |
-| `select` | Searchable `Command` Combobox | Set `'multiple' => true` for multi-select tags |
-| `date` | `<Input type="date" />` | Timezone-safe `YYYY-MM-DD` formatting |
-| `datetime` | `<Input type="datetime-local" />` | Automatic `formatDateTimeLocal()` conversion for Laravel timestamps |
-| `checkbox` / `toggle` | Card-styled `<Checkbox />` | Coerces `'0'`, `false`, `true`, `1` safely; displays `placeholder` as helper text |
-| `file` | `<Input type="file" />` | Forwards `accept`; automatically uses `POST` + `_method=put` on edit |
-| `chunked-file` | `<ChunkedFileInput />` | Native chunked uploader ([see Chunked File Uploads](/guide/chunked-uploads)) |
-| `hidden` | Not rendered | Value still included in form state |
-| `options-builder` | Dynamic list of options + correct answer selector | Ideal for quiz / poll options |
-| `repeater` | Dynamic nested sub-form rows | Recursive validation rules (`key.*.subkey`) |
+`equals`, `not_equals`, `in`, `not_in`, `truthy`, `falsy`, `empty`, `not_empty`.
 
 ---
 
-## Field Keys Reference
+## Auto-Handled `file` & `image` Fields
 
-| Key | Type | Description |
-| --- | --- | --- |
-| `key` | `string` | Form field name & model attribute |
-| `label` | `string` | Input label |
-| `type` | `string` | One of the field types listed above |
-| `rules` | `string\|array` | Laravel validation rules — supports pipe strings, arrays, `Rule` objects, and `{id}` placeholder |
-| `rules_update` | `string\|array` | Completely override validation rules on `update()` |
-| `required` | `bool` | Displays `*` indicator next to label |
-| `optional_on_update` | `bool` | Automatically swaps `'required'` → `'sometimes'` during `update()` |
-| `options` | `array` | Options for `select`: `[['label' => '...', 'value' => '...']]` |
-| `multiple` | `bool` | Enables multi-select combobox on `select` fields |
-| `accept` | `string` | File input `accept` filter (e.g. `image/*`, `.pdf,.zip`) |
-| `default` | `mixed` | Default value in create mode |
-| `disabled` | `bool` | Disables the field |
-| `placeholder` | `string` | Placeholder text (or subtitle text for `checkbox`/`toggle`) |
-| `hide_on_create` | `bool` | Excludes field from create form |
-| `hide_on_edit` | `bool` | Excludes field from edit form |
-| `hidden` | `bool` | Excludes field from both forms |
-| `ignore_on_save` | `bool` | Skips auto-assigning attribute in `CrudService::fillModel()` |
-
----
-
-## Validation Highlights
-
-### Automatic Unique Exclusion (`{id}`)
-
-Use `{id}` in `unique:` rules — `CrudService::buildValidationRules()` automatically strips it on create and replaces it with `$model->getKey()` on update:
-
-```php
-'rules' => 'required|email|unique:users,email,{id}',
-```
-
-Even without `{id}`, a shorthand `unique:products,sku` rule is automatically expanded to `unique:products,sku,{model_id},{key_name}` during updates.
-
-### `Rule` Objects & Partial `PATCH` Requests
-
-You can freely mix `Illuminate\Validation\Rule` objects into array rules:
-
-```php
-'rules' => ['required', 'string', Rule::in(['draft', 'published'])],
-```
-
-On `PATCH` requests (such as inline `status` column updates), `CrudController::update()` safely converts string `required*` rules to `sometimes` without breaking `Rule` objects.
-
-### Repeater Fields
-
-Define nested `fields` inside a `repeater`:
+Standard `file` and `image` fields support the same zero-boilerplate storage options as `chunked-file`:
 
 ```php
 [
-    'key'    => 'items',
-    'label'  => 'Line Items',
-    'type'   => 'repeater',
-    'rules'  => 'required|array|min:1',
-    'fields' => [
-        ['key' => 'product_id', 'label' => 'Product', 'type' => 'select', 'rules' => 'required|integer', 'options' => $products],
-        ['key' => 'quantity',   'label' => 'Qty',     'type' => 'number', 'rules' => 'required|integer|min:1', 'default' => 1],
-    ],
-],
+    'key'               => 'logo',
+    'label'             => 'University Logo',
+    'type'              => 'image',
+    'rules'             => 'nullable|image|max:3072',
+    'disk'              => 'public',
+    'directory'         => 'universities',
+    'path_column'       => 'logo_path',
+    'delete_old'        => true,
+]
 ```
 
-Repeater fields are skipped by `fillModel()` so you can persist them cleanly in `afterSave()`.
+- On create/update, `FileUploadService` stores the file, deletes replaced files, and populates `path_column` (plus optional `name_column` & `size_column`).
+- On edit, `FormField` shows the existing image thumbnail (or file download card) with **Replace** and **Remove** (`{ removed: true }`).
+- Legacy controllers using `'ignore_on_save' => true` (or `'auto_handle' => false`) keep full manual control in `beforeSave()`.
 
+---
+
+## Lazy Options & Async Relationship Selects
+
+Avoid running heavy queries on every controller request by using lazy closures or declarative async relationships:
+
+::: code-group
+
+```php [Lazy Closure Options]
+[
+    'key'     => 'category_id',
+    'label'   => 'Category',
+    'type'    => 'select',
+    'rules'   => 'required|exists:categories,id',
+    'options' => fn () => \App\Models\Category::orderBy('name')->pluck('name', 'id')->toArray(),
+]
+```
+
+```php [Async Searchable Relationship (/crud/options)]
+[
+    'key'          => 'university_id',
+    'label'        => 'University',
+    'type'         => 'select',
+    'rules'        => 'required|exists:universities,id',
+    'relationship' => [
+        'model'          => \App\Models\University::class,
+        'value'          => 'id',
+        'label'          => 'name',
+        'search_columns' => ['name', 'short_code'],
+        'limit'          => 25,
+        'async'          => true, // Uses signed native GET /crud/options endpoint
+    ],
+]
+```
+
+:::
+
+When `'async' => true`, `OptionsService` encrypts the approved model/columns into a user-scoped `options_config` token so the native `GET /crud/options` endpoint safely searches large tables with debounced queries and pre-hydrates selected labels on edit.

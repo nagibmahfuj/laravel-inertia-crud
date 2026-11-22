@@ -12,23 +12,10 @@ php artisan vendor:publish --tag=crud-config
 <?php
 
 return [
-    /*
-    | Multi-select filter delimiter in URL query strings
-    | e.g. ?filter_status=active--draft
-    */
     'default_separator' => '--',
+    'url_prefix'        => '/dashboard',
+    'max_per_page'      => 100,
 
-    /*
-    | Fallback URL prefix when a named route is not registered,
-    | and upper bound for the ?per_page query parameter.
-    */
-    'url_prefix'   => '/dashboard',
-    'max_per_page' => 100,
-
-    /*
-    | Default root breadcrumb prepended to generated breadcrumbs.
-    | Set 'root' => null to disable a root breadcrumb.
-    */
     'breadcrumbs' => [
         'root' => [
             'title' => 'Dashboard',
@@ -36,30 +23,17 @@ return [
         ],
     ],
 
-    /*
-    | Custom RoleResolver FQCN (null = auto-detect Spatie, else Eloquent)
-    */
     'role_resolver' => null,
 
-    /*
-    | Per-resource permission matrix keyed by route_prefix / resourceKey.
-    | Supported override keys:
-    |   'roles'       => string[]
-    |   'read_only'   => bool|string[]   (alias: 'read_only_roles')
-    |   'create_only' => bool|string[]   (alias: 'create_only_roles')
-    |   'no_delete'   => bool|string[]   (alias: 'no_delete_roles')
-    */
     'resources' => [
         // 'products' => [
         //     'roles'       => ['super_admin', 'admin', 'manager', 'viewer'],
+        //     'read_only'   => ['viewer'],
         //     'create_only' => ['manager'],
         //     'no_delete'   => ['admin'],
         // ],
     ],
 
-    /*
-    | Global role flags applied across all resources.
-    */
     'read_only_roles' => [],
     'no_delete_roles' => [],
 
@@ -82,16 +56,43 @@ return [
     ],
 
     /*
-    | Generator defaults for `php artisan crud:generate`.
-    | Set 'pages_directory' => null to auto-detect `resources/js/pages`
-    | vs `resources/js/Pages`.
+    | Native signed async relationship options endpoint.
     */
+    'options' => [
+        'enabled'    => true,
+        'route'      => '/crud/options',
+        'route_name' => 'crud.options',
+        'middleware' => ['web', 'auth'],
+        'limit'      => 25,
+        'ttl_hours'  => 6,
+    ],
+
+    /*
+    | Built-in CSV import & background queue defaults.
+    */
+    'import' => [
+        'enabled'            => true,
+        'route'              => '/crud/imports',
+        'route_name'         => 'crud.import',
+        'middleware'         => ['web', 'auth'],
+        'mode'               => 'auto',      // 'sync' | 'queued' | 'auto'
+        'queue_threshold_kb' => 1024,        // Auto-queue files > 1 MB
+        'queue'              => null,
+        'connection'         => null,
+        'chunk_size'         => 500,
+        'disk'               => 'local',
+        'temp_directory'     => 'crud-imports',
+        'status_ttl_hours'   => 24,
+        'max_errors_sample'  => 50,
+        'tries'              => 3,
+        'timeout'            => 600,
+    ],
+
     'generator' => [
         'controller_namespace' => 'App\\Http\\Controllers\\Dashboard',
         'policy_namespace'     => 'App\\Policies',
-        'pages_directory'      => null,
+        'pages_directory'      => null, // Auto-detects resources/js/pages vs resources/js/Pages
         'model_path'           => 'app/Models',
     ],
 ];
 ```
-

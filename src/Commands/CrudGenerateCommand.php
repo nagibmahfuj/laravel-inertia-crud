@@ -288,6 +288,9 @@ class CrudGenerateCommand extends Command
         if (in_array('pages', $generateOptions, true)) {
             $summaryRows[] = ['Index Page', "{$pagesDir}/Index.tsx"];
             $summaryRows[] = ['Form Page', "{$pagesDir}/Form.tsx"];
+            if (in_array('show', $selectedActions, true)) {
+                $summaryRows[] = ['Show Page', "{$pagesDir}/Show.tsx"];
+            }
         }
         if (in_array('permissions', $generateOptions, true)) {
             $summaryRows[] = ['Permissions', "config/crud.php → resources.{$routePrefix}"];
@@ -313,7 +316,7 @@ class CrudGenerateCommand extends Command
         }
 
         if (in_array('pages', $generateOptions, true)) {
-            $this->generatePages($pagePrefix, $force);
+            $this->generatePages($pagePrefix, $selectedActions, $force);
         }
 
         if (in_array('permissions', $generateOptions, true)) {
@@ -363,7 +366,7 @@ class CrudGenerateCommand extends Command
         }
 
         if ($generateAll || $this->option('pages')) {
-            $this->generatePages($pagePrefix, $force);
+            $this->generatePages($pagePrefix, $selectedActions, $force);
         }
 
         if ($generateAll || $this->option('permissions')) {
@@ -600,7 +603,7 @@ class CrudGenerateCommand extends Command
         $this->writeFile($path, $content, $force, 'Policy');
     }
 
-    protected function generatePages(string $pagePrefix, bool $force): void
+    protected function generatePages(string $pagePrefix, array $selectedActions, bool $force): void
     {
         $targetDir = $this->resolvePageTargetDirectory($pagePrefix);
 
@@ -615,6 +618,14 @@ class CrudGenerateCommand extends Command
         $formContent = $this->files->get($formStub);
         $formPath    = base_path("{$targetDir}/Form.tsx");
         $this->writeFile($formPath, $formContent, $force, 'Form Page');
+
+        // Show page (generated automatically when 'show' action is enabled)
+        if (in_array('show', $selectedActions, true)) {
+            $showStub    = $this->resolveStubPath('ShowPage.stub');
+            $showContent = $this->files->get($showStub);
+            $showPath    = base_path("{$targetDir}/Show.tsx");
+            $this->writeFile($showPath, $showContent, $force, 'Show Page');
+        }
     }
 
     protected function addToConfig(string $routePrefix): void

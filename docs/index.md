@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Laravel Inertia CRUD
   text: Config-driven CRUD for Laravel & Inertia React
-  tagline: Define columns, fields, filters, chunked uploads, and actions in a single PHP resourceConfig() array — get production-ready React/TypeScript UI, policies, and endpoints automatically.
+  tagline: Define columns, fields, filters, chunked uploads, background CSV imports, soft deletes, stats, and actions in a single PHP resourceConfig() array — get production-ready React/TypeScript UI automatically.
   image:
     src: /logo.svg
     alt: Laravel Inertia CRUD
@@ -21,35 +21,34 @@ hero:
 
 features:
   - icon: ⚙️
-    title: Normalized Config-Driven UI
-    details: Define titles, routes, breadcrumbs, columns, filters, fields, and actions once in resourceConfig(). ResourceIndex, ResourceForm, and AppLayout consume normalized meta automatically.
+    title: Normalized Index, Form & Show UI
+    details: Define titles, routes, breadcrumbs, sections, 2-column grids, conditional fields, KPI stats, and detail views in resourceConfig(). Opt into page, modal, or slide-over drawer forms per resource.
   - icon: 📦
-    title: Native Chunked File Uploads
-    details: Built-in chunked-file form field with an automatic /crud/chunk-upload endpoint, signed server validation, atomic reassembly, disk persistence, and stale chunk cleanup.
+    title: Native Chunked & Standard File Uploads
+    details: Built-in chunked-file (/crud/chunk-upload) plus auto-handled file & image fields with live previews, signed server validation, atomic reassembly, disk persistence, and delete cleanup.
+  - icon: 🚀
+    title: Sync & Background Queued CSV Imports
+    details: Config-driven streaming CSV import engine with sync/queued/auto modes, chunked-upload CSV support, real-time Cache progress polling, failed-row error CSV reports, sample templates, and events.
   - icon: 🎯
-    title: Action-Driven Export & Import
-    details: Control create, edit, delete, show, export, and import buttons and backend access from a single actions array filtered by BaseCrudPolicy.
-  - icon: ⚡
-    title: Interactive Generator Wizard
-    details: Run php artisan crud:generate to auto-detect models and database columns, choose enabled actions, and scaffold controllers, policies, and TSX pages in seconds.
+    title: Actions, Soft Deletes & Custom Handlers
+    details: Policy-filtered create, edit, delete, show, export, import, restore, forceDelete, bulk actions, inline toggles, and declarative custom row/bulk actions from one config array.
   - icon: 🔍
-    title: Rich Search, Filters & Bulk Destroy
-    details: Relationship search, select/multi-select, boolean, text, date, and date-range filters, whitelisted sorting, safe pagination, and built-in bulkDestroy.
-  - icon: 🔐
-    title: Zero-Config Permissions & Spatie
-    details: Matrix-based resource permissions with read_only, create_only, and no_delete overrides, auto-detecting spatie/laravel-permission or Eloquent roles.
+    title: Lazy & Async Relationship Selects
+    details: Lazy Closure options and signed native /crud/options async search, plus column visibility toggles, relationship search, faceted multi-select, text, boolean, date, and date-range filters.
+  - icon: ⚡
+    title: Full Artisan CLI Toolkit
+    details: Run crud:install for guided setup, crud:generate to scaffold controllers/policies/Index+Form+Show pages, crud:doctor to audit health, and crud:cleanup-chunks for housekeeping.
 ---
 
 ## Quick Install
 
 ```bash
 composer require nagibmahfuj/laravel-inertia-crud:^2.0
-php artisan vendor:publish --tag=crud-config
-php artisan vendor:publish --tag=crud-assets
+php artisan crud:install
 php artisan crud:generate
+php artisan crud:doctor
 ```
 
 ::: tip Compatible Stack
 Supports **PHP ^8.2**, **Laravel 11 / 12 / 13**, **Inertia.js v1 / v2 / v3**, **React 18 / 19**, and **shadcn/ui**.
 :::
-

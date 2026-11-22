@@ -7,7 +7,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+import { Search, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { DataTableFacetedFilter } from './DataTableFacetedFilter';
 import { DatePicker } from './DatePicker';
@@ -25,6 +25,7 @@ interface FilterBarProps {
     search: string;
     onSearch: (value: string) => void;
     defaultSeparator?: string;
+    softDeletes?: boolean;
 }
 
 const DEFAULT_SEPARATOR = '--';
@@ -38,6 +39,7 @@ export function FilterBar({
     search,
     onSearch,
     defaultSeparator = DEFAULT_SEPARATOR,
+    softDeletes = false,
 }: FilterBarProps) {
     const [localSearch, setLocalSearch] = useState(search);
 
@@ -54,9 +56,10 @@ export function FilterBar({
         return () => clearTimeout(timer);
     }, [localSearch, search, onSearch]);
 
-    // Only count active search and filter_* params (not sort/direction/per_page)
+    // Only count active search, trashed, and filter_* params (not sort/direction/per_page)
     const hasActiveFilters =
         search.length > 0 ||
+        Boolean(values.trashed) ||
         Object.entries(values).some(
             ([k, v]) => k.startsWith('filter_') && Boolean(v && v.length > 0),
         );
@@ -85,6 +88,25 @@ export function FilterBar({
                     className="h-8 pl-8 text-sm"
                 />
             </div>
+
+            {softDeletes && (
+                <Select
+                    value={values.trashed ?? 'active'}
+                    onValueChange={(v) =>
+                        onChange('trashed', v === 'active' ? '' : v)
+                    }
+                >
+                    <SelectTrigger className="h-8 w-[145px] truncate whitespace-nowrap">
+                        <Trash2 className="text-muted-foreground mr-1.5 h-3.5 w-3.5 shrink-0" />
+                        <SelectValue placeholder="Records" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="active">Active Only</SelectItem>
+                        <SelectItem value="with">With Trashed</SelectItem>
+                        <SelectItem value="only">Only Trashed</SelectItem>
+                    </SelectContent>
+                </Select>
+            )}
 
             {filters.map((filter) => {
                 const filterKey = `filter_${filter.key}`;

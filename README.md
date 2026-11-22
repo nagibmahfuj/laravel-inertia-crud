@@ -14,17 +14,14 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 
 ## ✨ Features
 
-- **Config-Driven & Normalized**: Define models, titles, breadcrumbs, routes, columns, fields, filters, and actions in a single `resourceConfig()` array — `ResourceIndex`, `ResourceForm`, and `AppLayout` consume normalized `meta` automatically with zero boilerplate props
-- **Action-Driven Visibility & Enforcement**: Control `create`, `edit`, `delete`, `show`, `export`, and `import` buttons and backend access from `actions` + `BaseCrudPolicy`
-- **Native Chunked File Uploads**: Built-in `chunked-file` field type with an automatic package endpoint (`POST /crud/chunk-upload`), per-field chunk/size/accept/disk/directory configuration, signed server-side validation, atomic reassembly, automatic disk persistence, and stale upload cleanup (`crud:cleanup-chunks`)
-- **Polished Interactive Generator**: `php artisan crud:generate` displays package/environment info, discovers models (including nested folders), detects schema columns, lets you choose enabled actions, and generates clean v2 stubs
-- **Built-in Search & Advanced Filters**: Multi-column & relationship search plus `select`, multi-select, `boolean`, `text`, `date`, and `date_range` filters (including relationship filtering)
-- **Server-Side Sorting & Safe Pagination**: Whitelisted sort direction, safe `per_page` bounds, and automatic primary-key fallback for non-timestamped models
-- **Bulk Destroy**: Built-in `bulkDestroy` route & controller action when `row_selection` is enabled
-- **Role-Based Permissions**: Configurable per-resource `roles`, `read_only`, `create_only`, and `no_delete` overrides with automatic `spatie/laravel-permission` detection
-- **Lifecycle Hooks & Audit Columns**: `beforeSave()` / `afterSave()` hooks and automatic `created_by` / `updated_by` population
-- **UUID / ULID Support**: Standard integer and string primary keys supported across `show`, `edit`, `update`, `destroy`, and `bulkDestroy`
-- **Publishable shadcn/ui Components & Theming**: Full ownership of TypeScript/React components plus runtime CSS variable theming
+- **Config-Driven & Normalized (`Index`, `Form`, `Show`)**: Define titles, breadcrumbs, routes, KPI stats, columns, fields, detail sections, filters, and actions in a single `resourceConfig()` array — `ResourceIndex`, `ResourceForm`, `ResourceShow`, and `AppLayout` consume normalized `meta` automatically
+- **Action-Driven Visibility & Custom Actions**: Control `create`, `edit`, `delete`, `show`, `export`, `import`, inline boolean toggles, and declarative row/bulk `custom_actions` from one config array filtered by `BaseCrudPolicy`
+- **Native Chunked & Auto-Handled File Uploads**: Built-in `chunked-file` (`POST /crud/chunk-upload`) plus auto-handled `file` & `image` fields with live previews, signed server validation, atomic reassembly, disk persistence, and delete cleanup
+- **Sync & Background Queued CSV Imports**: Streaming CSV import engine with `sync`/`queued`/`auto` modes, chunked-upload CSV support, Cache progress polling (`/crud/imports/{id}/status`), downloadable failed-rows CSV (`/crud/imports/{id}/errors`), auto sample CSV (`GET {uri}/import-sample`), and `CrudImportCompleted`/`CrudImportFailed` events
+- **Rich Form Layouts & 22 Field Types**: Card sections, 2-column grid (`form_columns` / `col_span`), `help` text, conditional `visible_when`, Modal/Drawer form mode (`form_mode`), lazy Closure options, signed async relationship selects (`/crud/options`), plus `image`, `slug`, `tags`, `radio`, `color`, `key-value`, and zero-dependency Markdown `rich-text`
+- **Soft Deletes & Table UX**: Auto-detected `SoftDeletes` trash filter + `restore`/`forceDestroy`/`bulkRestore`/`bulkForceDestroy`, `localStorage`-persisted column visibility toggle (`default_hidden`), KPI `StatCard` stats row, and 15 column types (`copyable`, `currency`, `link`, `tags`, `truncate`, `toggle`, etc.)
+- **Full Artisan CLI Toolkit**: `crud:install` (guided setup + prerequisite check), `crud:generate` (scaffolds controllers, policies, `Index.tsx`, `Form.tsx`, `Show.tsx`), `crud:doctor` (health audit), and `crud:cleanup-chunks`
+- **Role-Based Permissions & Spatie**: Configurable per-resource `roles`, `read_only`, `create_only`, and `no_delete` overrides with automatic `spatie/laravel-permission` detection
 - **Laravel 11 / 12 / 13 & Inertia v1 / v2 / v3** compatible
 
 ---
@@ -544,7 +541,7 @@ Each column in the `columns` array supports:
 | `key`            | `string`   | Model attribute or dot-notation path (e.g., `category.name`)                                      |
 | `label`          | `string`   | Column header text                                                                                |
 | `sortable`       | `bool`     | Whether the column is sortable                                                                    |
-| `type`           | `string`   | Display type: `text`, `number`, `badge`, `status`, `boolean`, `date`, `datetime`, `image`, `serial` |
+| `type`           | `string`   | Display type: `text`, `number`, `badge`, `status`, `boolean`, `toggle`, `date`, `datetime`, `image`, `serial`, `copyable`, `currency`, `link`, `tags`, `truncate` |
 | `className`      | `string`   | Optional Tailwind classes applied to `<th>` and `<td>`                                            |
 | `export_format`  | `callable` | Custom CSV export formatter: `fn($record) => $record->name`                                       |
 | `display_format` | `callable` | Custom display formatter applied server-side before sending to frontend                           |
@@ -577,7 +574,7 @@ Each field in the `fields` array supports:
 
 ### Supported Field Types
 
-`text`, `email`, `password`, `number`, `textarea`, `select`, `date`, `datetime`, `toggle`, `checkbox`, `file`, `chunked-file`, `hidden`, `options-builder`, `repeater`
+`text`, `email`, `password`, `number`, `textarea`, `rich-text`, `select`, `radio`, `date`, `datetime`, `toggle`, `checkbox`, `file`, `image`, `chunked-file`, `slug`, `tags`, `color`, `key-value`, `hidden`, `options-builder`, `repeater`
 
 ---
 

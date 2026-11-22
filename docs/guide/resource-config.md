@@ -1,10 +1,8 @@
 # Normalized Resource Config
 
-In v2.0, `CrudController::resourceConfig()` is the **single source of truth** for titles, descriptions, routes, breadcrumbs, columns, filters, fields, and actions. `CrudService::buildMeta()` normalizes this configuration into a predictable `meta` prop consumed directly by `ResourceIndex`, `ResourceForm`, and `AppLayout`.
+In v2.0, `CrudController::resourceConfig()` is the **single source of truth** for titles, descriptions, routes, breadcrumbs, KPI stats, columns, filters, fields, detail views, form modes, soft deletes, custom actions, and imports.
 
 ## Minimal Inertia Pages
-
-Because routes, titles, and breadcrumbs come from `meta`, your generated pages need almost zero boilerplate:
 
 ::: code-group
 
@@ -40,10 +38,22 @@ Form.layout = (page: any) => (
 );
 ```
 
-:::
+```tsx [Show.tsx]
+import ResourceShow from '@/components/crud/ResourceShow';
+import type { ResourceShowProps } from '@/components/crud/types';
+import AppLayout from '@/layouts/app-layout';
 
-::: tip Optional Prop Overrides
-Every normalized prop on `ResourceIndex` (`title`, `description`, `baseRoute`, `exportRoute`, `importRoute`, `importFormatUrl`, `importAccept`, `importMaxSizeMB`) and `ResourceForm` (`title`, `submitRoute`, `indexRoute`) remains available as an optional override whenever a single page needs custom behavior.
+export default function Show(props: ResourceShowProps) {
+    return <ResourceShow {...props} />;
+}
+
+Show.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);
+```
+
 :::
 
 ---
@@ -55,85 +65,70 @@ Every normalized prop on `ResourceIndex` (`title`, `description`, `baseRoute`, `
 | `model` | `string` | **Required.** Model FQCN (e.g. `App\Models\Product::class`) |
 | `resource_name` | `string` | Singular label (auto-derived from model class name if omitted) |
 | `resource_plural` | `string` | Plural label (`Str::plural($resource_name)`) |
-| `title` | `string\|null` | Index page title (defaults to `resource_plural`) |
-| `create_title` | `string\|null` | Create page title (defaults to `"Create {$resource_name}"`) |
-| `edit_title` | `string\|null` | Edit page title (defaults to `"Edit {$resource_name}"`) |
-| `show_title` | `string\|null` | Show page title (defaults to `"{$resource_name} Details"`) |
-| `description` | `string\|null` | Optional subtitle rendered in `PageHeader` |
+| `title` / `create_title` / `edit_title` / `show_title` | `string\|null` | Context-aware page titles |
+| `description` | `string\|null` | Optional subtitle rendered in `PageHeader` & `ResourceShow` |
 | `route_prefix` | `string` | Named route prefix (e.g. `'products'`) |
-| `base_route` | `string\|null` | Base index URL (auto-resolved via `route("{$route_prefix}.index", [], false)`) |
-| `url_prefix` | `string\|null` | Fallback URL prefix when named route isn't registered (`config('crud.url_prefix')`) |
+| `base_route` / `url_prefix` | `string\|null` | Auto-resolved via `route("{$route_prefix}.index", [], false)` |
 | `page_prefix` | `string` | Inertia page folder prefix (e.g. `'Dashboard/Products'`) |
+| `form_mode` | `'page'\|'modal'\|'drawer'` | Create/Edit UX mode (default `'page'`) |
+| `form_columns` | `1\|2` | Responsive form grid column count (default `1`) |
+| `form_sections` | `array` | Optional section titles, descriptions, and per-section column overrides |
+| `soft_deletes` | `bool` | Auto-detected from `Illuminate\Database\Eloquent\SoftDeletes` trait |
 | `per_page` | `int` | Default page size (default `10`, clamped by `config('crud.max_per_page')`) |
 | `searchable` | `string[]` | Searchable attributes & dot-notated relations |
-| `default_sort` | `string` | Default sort column (falls back to `created_at` or primary key) |
-| `default_direction` | `'asc'\|'desc'` | Default sort direction (`'desc'`) |
-| `with` | `string[]` | Eloquent eager loads |
-| `with_count` | `string[]` | Eloquent `withCount` relations |
-| `actions` | `string[]` | Enabled actions: `'create'`, `'edit'`, `'delete'`, `'show'`, `'export'`, `'import'` |
-| `row_selection` | `bool` | Enables row checkboxes and `BulkActions` bar (`bulkDestroy`) |
-| `export_route` | `string\|null` | Custom export URL override (only populated when `'export'` is authorized) |
-| `import_route` | `string\|null` | Custom import URL override (only populated when `'import'` is authorized) |
-| `import_format_url` | `string\|null` | Sample template download URL shown inside the Import modal |
-| `import_accept` | `string` | Accepted file types in Import modal (default `'.csv,.xlsx,.xls'`) |
-| `import_max_size_mb` | `int` | Max import file size in MB (default `100`) |
-| `breadcrumbs` | `array\|null` | Custom base breadcrumb trail (Create/Edit/Details appended automatically) |
-| `columns` | `array[]` | Table & CSV export column definitions |
-| `filters` | `array[]` | `FilterBar` filter definitions |
+| `default_sort` / `default_direction` | `string` | Default sort column & direction (`'desc'`) |
+| `with` / `with_count` | `string[]` | Eloquent eager loads & count relations |
+| `stats` | `array\|Closure` | KPI `StatCard` definitions rendered above the table on `index()` |
+| `actions` | `string[]` | `'create'`, `'edit'`, `'delete'`, `'show'`, `'export'`, `'import'` |
+| `custom_actions` | `array[]` | Declarative row and bulk actions with confirmation & policy checks |
+| `row_selection` | `bool` | Enables checkboxes, `bulkDestroy`, `bulkRestore`, `bulkForceDestroy`, & bulk custom actions |
+| `import` | `array` | Config-driven sync/queued CSV import engine ([see Actions, Export & Import](/guide/actions-import-export)) |
+| `columns` | `array[]` | Index table & CSV export column definitions |
+| `show_fields` | `array[]` | Optional detail-page field layout for `ResourceShow` (falls back to `columns`) |
+| `filters` | `array[]` | `FilterBar` definitions (supports lazy Closure & async relationship options) |
 | `fields` | `array[]` | `ResourceForm` field definitions |
+| `breadcrumbs` | `array\|null` | Custom base breadcrumb trail (Create/Edit/Details auto-appended) |
 
 ---
 
-## Normalized `meta` Payload Shape
+## KPI Stats Row (`stats`)
 
-When `CrudController` renders `Index`, `Form`, or `Show`, it passes `meta` shaped as:
-
-```json
-{
-  "resource_name": "Product",
-  "resource_plural": "Products",
-  "title": "Products",
-  "description": null,
-  "route_prefix": "products",
-  "base_route": "/dashboard/products",
-  "routes": {
-    "index": "/dashboard/products",
-    "create": "/dashboard/products/create",
-    "store": "/dashboard/products",
-    "update": "/dashboard/products/42",
-    "export": "/dashboard/products/export",
-    "import": "/dashboard/products/import",
-    "bulk_destroy": "/dashboard/products/bulk-destroy",
-    "chunk_upload": "/crud/chunk-upload"
-  },
-  "breadcrumbs": [
-    { "title": "Dashboard", "href": "/dashboard" },
-    { "title": "Products", "href": "/dashboard/products" }
-  ],
-  "columns": [],
-  "filters": [],
-  "actions": ["create", "edit", "delete", "export"],
-  "row_selection": false,
-  "per_page": 10,
-  "default_separator": "--",
-  "import_route": null,
-  "import_format_url": null,
-  "import_accept": ".csv,.xlsx,.xls",
-  "import_max_size_mb": 100
-}
-```
-
-### Custom Breadcrumbs Example
-
-Override the auto-generated breadcrumbs right inside `resourceConfig()`:
+Return KPI summary cards from either `resourceConfig()['stats']` or by overriding `protected function stats($baseQuery): array`:
 
 ```php
-'breadcrumbs' => [
-    ['title' => 'Dashboard', 'href' => '/dashboard'],
-    ['title' => 'Catalog', 'href' => '#'],
-    ['title' => 'Products', 'href' => '/dashboard/products'],
+'stats' => fn ($query) => [
+    ['title' => 'Total Products', 'value' => (clone $query)->count(), 'icon' => 'Package'],
+    ['title' => 'Active',         'value' => (clone $query)->where('is_active', true)->count(), 'change' => 12, 'icon' => 'CheckCircle'],
 ],
 ```
 
-On `create`, `edit`, and `show` pages, the package automatically appends `{ title: 'Create' | 'Edit' | 'Details', href: '' }`.
+`ResourceIndex` renders a responsive 1–4 column `<StatCard />` grid directly above the DataTable automatically.
 
+---
+
+## Modal & Slide-Over Drawer Forms (`form_mode`)
+
+For lightweight resources (tags, categories, blacklisted phones), set `'form_mode'` to `'modal'` or `'drawer'`:
+
+```php
+'form_mode' => 'drawer', // 'page' (default) | 'modal' | 'drawer'
+```
+
+Clicking **Add** or row **Edit** fetches the server-prepared fields, signed upload configs, and `existing_file` metadata from `create()` / `edit()` (using `X-Crud-Form: 1` with full Policy authorization) and renders `<ResourceForm embedded />` in place without leaving the table!
+
+---
+
+## Built-In Detail View (`ResourceShow`)
+
+When `'show'` is in `actions`, `CrudController::show()` passes `showFields` to `Show.tsx`:
+
+```php
+'show_fields' => [
+    ['key' => 'title',      'label' => 'Title',   'type' => 'text',      'section' => 'Overview'],
+    ['key' => 'sku',        'label' => 'SKU',     'type' => 'copyable',  'section' => 'Overview'],
+    ['key' => 'cover_path', 'label' => 'Cover',   'type' => 'image',     'section' => 'Media'],
+    ['key' => 'body',       'label' => 'Content', 'type' => 'rich-text', 'section' => 'Content', 'col_span' => 2],
+],
+```
+
+If `show_fields` is omitted, `ResourceShow` falls back cleanly to your `columns` definitions.

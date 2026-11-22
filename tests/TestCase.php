@@ -12,6 +12,9 @@ use NagibMahfuj\Crud\Tests\Fixtures\Product;
 use NagibMahfuj\Crud\Tests\Fixtures\ProductController;
 use NagibMahfuj\Crud\Tests\Fixtures\ProductPolicy;
 use NagibMahfuj\Crud\Tests\Fixtures\ReadOnlyExportDisabledController;
+use NagibMahfuj\Crud\Tests\Fixtures\SoftArticle;
+use NagibMahfuj\Crud\Tests\Fixtures\SoftArticleController;
+use NagibMahfuj\Crud\Tests\Fixtures\SoftArticlePolicy;
 use NagibMahfuj\Crud\Tests\Fixtures\User;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -50,6 +53,9 @@ abstract class TestCase extends Orchestra
                 'roles'           => ['super_admin', 'admin', 'viewer'],
                 'read_only_roles' => ['viewer'],
                 'no_delete'       => true,
+            ],
+            'articles' => [
+                'roles' => ['super_admin', 'admin', 'viewer'],
             ],
         ]);
         $app['config']->set('crud.read_only_roles', ['viewer']);
@@ -94,6 +100,19 @@ abstract class TestCase extends Orchestra
             $table->uuid('id')->primary();
             $table->string('title');
         });
+
+        Schema::create('soft_articles', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->string('slug')->nullable()->unique();
+            $table->foreignId('category_id')->nullable();
+            $table->string('cover_path')->nullable();
+            $table->boolean('is_featured')->default(false);
+            $table->decimal('price', 10, 2)->default(0);
+            $table->text('body')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
     }
 
     protected function setUp(): void
@@ -101,10 +120,12 @@ abstract class TestCase extends Orchestra
         parent::setUp();
 
         Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(SoftArticle::class, SoftArticlePolicy::class);
 
         Route::middleware(['web', 'auth'])->prefix('dashboard')->group(function () {
             Route::crudResource('products', ProductController::class);
             Route::crudResource('no-export-products', ReadOnlyExportDisabledController::class);
+            Route::crudResource('articles', SoftArticleController::class);
         });
     }
 

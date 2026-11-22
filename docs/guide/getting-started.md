@@ -1,6 +1,6 @@
 # Installation & Setup
 
-Get up and running with `nagibmahfuj/laravel-inertia-crud` v2 in under 5 minutes.
+Get up and running with `nagibmahfuj/laravel-inertia-crud` v2 in minutes.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Get up and running with `nagibmahfuj/laravel-inertia-crud` v2 in under 5 minutes
 
 Your Laravel React/TypeScript app should include:
 
-- **shadcn/ui** components: `Button`, `Input`, `Label`, `Select`, `Table`, `Badge`, `Checkbox`, `Dialog`, `Calendar`, `Popover`, `Card`, `Progress`, `Separator`, `DropdownMenu`, `Textarea`, `Command`
+- **shadcn/ui** components: `Badge`, `Button`, `Calendar`, `Card`, `Checkbox`, `Command`, `Dialog`, `DropdownMenu`, `Input`, `Label`, `Popover`, `Progress`, `Select`, `Separator`, `Table`, `Textarea`
 - **lucide-react** — Icons
 - **date-fns** — Date formatting
 - **clsx** & **tailwind-merge** — Class merging
@@ -33,54 +33,34 @@ composer require nagibmahfuj/laravel-inertia-crud:^2.0
 
 Laravel auto-discovers `NagibMahfuj\Crud\CrudServiceProvider`, registering:
 - `Route::crudResource()` macro
-- Native chunk upload endpoints (`POST /crud/chunk-upload` and `DELETE /crud/chunk-upload/{uploadId}`)
-- `crud:generate` and `crud:cleanup-chunks` Artisan commands
-- Automatic `RoleResolver` detection (`SpatieRoleResolver` or `EloquentRoleResolver`)
+- Native chunk upload endpoints (`POST /crud/chunk-upload`, `DELETE /crud/chunk-upload/{uploadId}`)
+- Native async relationship options endpoint (`GET /crud/options`)
+- Native background import endpoints (`GET /crud/imports/{importId}/status`, `GET /crud/imports/{importId}/errors`)
+- Artisan commands: `crud:install`, `crud:generate`, `crud:doctor`, and `crud:cleanup-chunks`
 
-## Step 2: Publish Config & Frontend Assets
+## Step 2: Run the Guided Installer
+
+```bash
+php artisan crud:install
+```
+
+`crud:install` publishes `config/crud.php` and frontend assets (`resources/js/components/crud/`, `resources/js/lib/crud-theme.ts`, `resources/js/hooks/use-nav-items.ts`), inspects `package.json` and `resources/js/components/ui/`, and prints exact commands for any missing npm packages or shadcn/ui components.
+
+Or publish individually:
 
 ```bash
 php artisan vendor:publish --tag=crud-config
 php artisan vendor:publish --tag=crud-assets
 ```
 
-This publishes:
-- `config/crud.php` — Permissions, defaults, chunk upload settings, and generator paths
-- `resources/js/components/crud/` — All React components (`ResourceIndex`, `ResourceForm`, `FormField`, `ChunkedFileInput`, `DataTable`, `FilterBar`, `types.ts`, etc.)
-- `resources/js/lib/crud-theme.ts` — Runtime CSS variable theme helpers
-- `resources/js/hooks/use-nav-items.ts` — Permission-filtered navigation hook
-
-## Step 3: Install Frontend Dependencies
-
-```bash
-npm install date-fns lodash react-day-picker
-npm install -D @types/lodash
-```
-
-Install any missing shadcn/ui primitives:
-
-```bash
-npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu textarea command
-```
-
-::: tip Troubleshooting shadcn/ui CLI errors
-If `npx shadcn@latest add` fails due to a stale pnpm file:
-```bash
-rm -f pnpm-lock.yaml pnpm-workspace.yaml
-npm pkg set packageManager="npm@10.8.0"
-```
-Then re-run the shadcn command.
-:::
-
-## Step 4: Scaffold Your First Resource
-
-Use the interactive wizard:
+## Step 3: Scaffold & Verify
 
 ```bash
 php artisan crud:generate
+php artisan crud:doctor
 ```
 
-Then register the route in `routes/web.php`:
+Register your resource route in `routes/web.php`:
 
 ```php
 use App\Http\Controllers\Dashboard\ProductController;
@@ -94,10 +74,13 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 
 | Method | URI | Controller Action | Route Name |
 | --- | --- | --- | --- |
-| `GET` | `{uri}/export` | `export` (if exists) | `{name}.export` |
-| `POST` | `{uri}/import` | `import` (if exists) | `{name}.import` |
-| `POST` | `{uri}/bulk-destroy` | `bulkDestroy` (if exists) | `{name}.bulk-destroy` |
+| `GET` | `{uri}/export` | `export` | `{name}.export` |
+| `POST` | `{uri}/import` | `import` | `{name}.import` |
+| `GET` | `{uri}/import-sample` | `importSample` | `{name}.import-sample` |
+| `POST` | `{uri}/bulk-destroy` | `bulkDestroy` | `{name}.bulk-destroy` |
+| `POST` | `{uri}/bulk-restore` | `bulkRestore` | `{name}.bulk-restore` |
+| `POST` | `{uri}/bulk-force-destroy` | `bulkForceDestroy` | `{name}.bulk-force-destroy` |
+| `POST` | `{uri}/action/{action}` | `handleAction` | `{name}.action` |
+| `POST` | `{uri}/{id}/restore` | `restore` | `{name}.restore` |
+| `DELETE` | `{uri}/{id}/force` | `forceDestroy` | `{name}.force-destroy` |
 | Standard | `Route::resource(...)` | `index`, `create`, `store`, `show`, `edit`, `update`, `destroy` | `{name}.*` |
-
-Next: explore the [Interactive Generator](/guide/generator) or learn how [Normalized Resource Config](/guide/resource-config) eliminates repetitive page props.
-

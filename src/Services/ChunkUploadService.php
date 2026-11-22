@@ -568,10 +568,10 @@ class ChunkUploadService
     /**
      * Delete associated chunked-file assets when a record is permanently deleted.
      */
-    public function deleteModelFiles(Model $model, array $fields): void
+    public function deleteModelFiles(Model $model, array $fields, bool $force = false): void
     {
-        // Do not delete stored files for soft-deleted models
-        if (in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
+        // Do not delete stored files for soft-deleted models unless force-deleting
+        if (!$force && in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
             return;
         }
 

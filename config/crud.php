@@ -62,19 +62,9 @@ return [
     | The 'roles' array determines which roles can access the resource.
     |
     | Optional per-resource overrides:
-    |  - 'read_only'   (or 'read_only_roles'):   string[] — roles limited to read-only access
-    |  - 'create_only' (or 'create_only_roles'): string[] — roles that can view & create, not update/delete
+    |  - 'read_only'   (or 'read_only_roles'):   bool|string[] — roles limited to read-only access
+    |  - 'create_only' (or 'create_only_roles'): bool|string[] — roles that can view & create, not update/delete
     |  - 'no_delete'   (or 'no_delete_roles'):   bool|string[] — true disables delete for all roles, or list of roles
-    |
-    | Example:
-    | 'users' => [
-    |     'roles' => ['super_admin', 'admin'],
-    | ],
-    | 'booths' => [
-    |     'roles'       => ['super_admin', 'admin', 'manager'],
-    |     'create_only' => ['manager'],
-    |     'no_delete'   => ['admin'],
-    | ],
     |
     */
     'resources' => [
@@ -120,12 +110,56 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Async Relationship Options
+    |--------------------------------------------------------------------------
+    |
+    | Native signed endpoint powering async searchable select fields/filters.
+    |
+    */
+    'options' => [
+        'enabled'    => true,
+        'route'      => '/crud/options',
+        'route_name' => 'crud.options',
+        'middleware' => ['web', 'auth'],
+        'limit'      => 25,
+        'ttl_hours'  => 6,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | CSV Import & Background Processing
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for the built-in CSV import engine, auto-queueing threshold,
+    | Cache-backed progress polling, and downloadable error CSV reports.
+    |
+    */
+    'import' => [
+        'enabled'            => true,
+        'route'              => '/crud/imports',
+        'route_name'         => 'crud.import',
+        'middleware'         => ['web', 'auth'],
+        'mode'               => 'auto',      // 'sync' | 'queued' | 'auto'
+        'queue_threshold_kb' => 1024,        // Auto-queue files larger than 1 MB
+        'queue'              => null,        // null = default queue
+        'connection'         => null,        // null = default connection
+        'chunk_size'         => 500,         // DB insert/upsert batch size
+        'disk'               => 'local',     // Disk where uploaded import CSVs & error reports are stored
+        'temp_directory'     => 'crud-imports',
+        'status_ttl_hours'   => 24,          // How long import progress stays in Cache
+        'max_errors_sample'  => 50,          // Max row errors included inline in JSON status
+        'tries'              => 3,
+        'timeout'            => 600,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Generator Defaults
     |--------------------------------------------------------------------------
     |
     | Default namespaces and paths used by the `php artisan crud:generate` command.
-    | Set 'pages_directory' to null to auto-detect `resources/js/pages/Dashboard`
-    | vs `resources/js/Pages/Dashboard`.
+    | Set 'pages_directory' to null to auto-detect `resources/js/pages`
+    | vs `resources/js/Pages`.
     |
     */
     'generator' => [
