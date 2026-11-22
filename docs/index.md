@@ -36,16 +36,16 @@ features:
     title: Lazy & Async Relationship Selects
     details: Lazy Closure options and signed native /crud/options async search, plus column visibility toggles, relationship search, faceted multi-select, text, boolean, date, and date-range filters.
   - icon: ⚡
-    title: Full Artisan CLI Toolkit
-    details: Run crud:install for guided setup, crud:generate to scaffold controllers/policies/Index+Form+Show pages, crud:doctor to audit health, and crud:cleanup-chunks for housekeeping.
+    title: Full Artisan CLI Toolkit & Starter Bootstrapper
+    details: Run crud:install --starter to pick a role system (column or Spatie), scaffold Users/Posts CRUDs, and wire React Starter Kit files automatically — plus crud:generate, crud:doctor, and crud:cleanup-chunks.
 ---
 
 ## Quick Install
 
 ```bash
 composer require nagibmahfuj/laravel-inertia-crud:^2.0
-php artisan crud:install
-php artisan crud:generate
+php artisan crud:install --starter
+php artisan migrate && php artisan db:seed --class=CrudAdminSeeder
 php artisan crud:doctor
 ```
 

@@ -53,6 +53,10 @@ You can pass `'no_delete' => true`, `'read_only' => true`, or `'create_only' => 
 
 ## Role Resolvers
 
+::: tip Quick Role Setup on New Projects
+Run `php artisan crud:install --starter` (or `--roles=column` / `--roles=spatie`) to automatically scaffold either the `users.role` column migration + `$fillable` wiring or Spatie's `HasRoles` trait + `CrudAdminSeeder`.
+:::
+
 ### 1. Automatic Spatie Detection (`SpatieRoleResolver`)
 
 If `spatie/laravel-permission` is installed, the package automatically uses `$user->hasRole()` and `$user->getRoleNames()` — zero configuration required:

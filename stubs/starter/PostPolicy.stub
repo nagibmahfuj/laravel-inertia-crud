@@ -1,0 +1,13 @@
+<?php
+
+namespace {{ namespace }};
+
+use NagibMahfuj\Crud\BaseCrudPolicy;
+
+class PostPolicy extends BaseCrudPolicy
+{
+    protected function resourceKey(): string
+    {
+        return 'posts';
+    }
+}

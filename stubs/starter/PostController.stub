@@ -1,0 +1,238 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Models\Post;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use NagibMahfuj\Crud\CrudController;
+
+class PostController extends CrudController
+{
+    protected function resourceConfig(): array
+    {
+        return [
+            'model'             => Post::class,
+            'resource_name'     => 'Post',
+            'resource_plural'   => 'Posts',
+            'title'             => 'Posts',
+            'description'       => 'Showcase CRUD with rich-text, image uploads, SoftDeletes, custom actions, and CSV import.',
+            'route_prefix'      => 'posts',
+            'page_prefix'       => '{{ pagePrefix }}',
+            'per_page'          => 15,
+            'default_sort'      => 'id',
+            'default_direction' => 'desc',
+            'searchable'        => ['title', 'slug', 'excerpt'],
+            'row_selection'     => true,
+            'form_columns'      => 2,
+            'form_sections'     => [
+                'Basic'   => ['title' => 'Basic Information', 'description' => 'Title, URL slug, and publishing status.', 'columns' => 2],
+                'Media'   => ['title' => 'Cover Image & Tags', 'columns' => 2],
+                'Content' => ['title' => 'Post Content', 'columns' => 1],
+            ],
+            'actions' => ['create', 'edit', 'delete', 'show', 'export', 'import'],
+
+            'stats' => fn ($query) => [
+                [
+                    'title' => 'Total Posts',
+                    'value' => (clone $query)->count(),
+                    'icon'  => 'FileText',
+                ],
+                [
+                    'title' => 'Published',
+                    'value' => (clone $query)->where('status', 'published')->count(),
+                    'icon'  => 'CheckCircle',
+                ],
+                [
+                    'title' => 'Featured',
+                    'value' => (clone $query)->where('is_featured', true)->count(),
+                    'icon'  => 'Star',
+                ],
+            ],
+
+            'custom_actions' => [
+                [
+                    'key'        => 'publish',
+                    'label'      => 'Publish',
+                    'scope'      => 'row',
+                    'icon'       => 'Send',
+                    'variant'    => 'ghost',
+                    'permission' => 'update',
+                    'confirm'    => [
+                        'title'       => 'Publish this post?',
+                        'description' => 'This will mark the post as published immediately.',
+                    ],
+                    'handler' => function (Post $post) {
+                        $post->update([
+                            'status'       => 'published',
+                            'published_at' => $post->published_at ?? now(),
+                        ]);
+
+                        return back()->with('success', "Published \"{$post->title}\".");
+                    },
+                ],
+                [
+                    'key'        => 'publish_selected',
+                    'label'      => 'Publish Selected',
+                    'scope'      => 'bulk',
+                    'icon'       => 'CheckCircle',
+                    'variant'    => 'outline',
+                    'permission' => 'update',
+                    'handler'    => function ($records, Request $request) {
+                        $records->each(fn (Post $post) => $post->update([
+                            'status'       => 'published',
+                            'published_at' => $post->published_at ?? now(),
+                        ]));
+
+                        return back()->with('success', "{$records->count()} post(s) published.");
+                    },
+                ],
+            ],
+
+            'import' => [
+                'mode'               => 'auto',
+                'queue_threshold_kb' => 1024,
+                'chunk_size'         => 500,
+                'strategy'           => 'upsert',
+                'unique_by'          => ['slug'],
+                'columns'            => [
+                    'Title'    => ['attribute' => 'title',       'rules' => 'required|string|max:255'],
+                    'Slug'     => ['attribute' => 'slug',        'rules' => 'required|string|max:255'],
+                    'Status'   => ['attribute' => 'status',      'rules' => 'nullable|in:draft,published,archived', 'default' => 'draft'],
+                    'Featured' => ['attribute' => 'is_featured', 'rules' => 'nullable|boolean', 'cast' => 'bool', 'default' => false],
+                    'Excerpt'  => ['attribute' => 'excerpt',     'rules' => 'nullable|string'],
+                ],
+                'transform' => fn (array $row) => [
+                    ...$row,
+                    'slug' => Str::slug((string) ($row['slug'] ?: $row['title'])),
+                ],
+                'sample_rows' => [
+                    ['Welcome to Laravel Inertia CRUD', 'welcome-to-laravel-inertia-crud', 'published', 'true', 'A quick starter showcase post.'],
+                ],
+            ],
+
+            'columns' => [
+                ['key' => 'cover_path',  'label' => 'Cover',    'sortable' => false, 'type' => 'image'],
+                ['key' => 'title',       'label' => 'Title',    'sortable' => true,  'type' => 'truncate', 'max_length' => 40],
+                ['key' => 'slug',        'label' => 'Slug',     'sortable' => true,  'type' => 'copyable', 'default_hidden' => true],
+                ['key' => 'status',      'label' => 'Status',   'sortable' => true,  'type' => 'status'],
+                ['key' => 'is_featured', 'label' => 'Featured', 'sortable' => true,  'type' => 'toggle'],
+                ['key' => 'tags',        'label' => 'Tags',     'sortable' => false, 'type' => 'tags'],
+                ['key' => 'created_at',  'label' => 'Created',  'sortable' => true,  'type' => 'datetime'],
+            ],
+
+            'show_fields' => [
+                ['key' => 'title',        'label' => 'Title',        'type' => 'text',      'section' => 'Overview'],
+                ['key' => 'slug',         'label' => 'Slug',         'type' => 'copyable',  'section' => 'Overview'],
+                ['key' => 'status',       'label' => 'Status',       'type' => 'badge',     'section' => 'Overview'],
+                ['key' => 'is_featured',  'label' => 'Featured',     'type' => 'boolean',   'section' => 'Overview'],
+                ['key' => 'published_at', 'label' => 'Published At', 'type' => 'datetime',  'section' => 'Overview'],
+                ['key' => 'tags',         'label' => 'Tags',         'type' => 'tags',      'section' => 'Overview'],
+                ['key' => 'cover_path',   'label' => 'Cover Image',  'type' => 'image',     'section' => 'Media'],
+                ['key' => 'excerpt',      'label' => 'Excerpt',      'type' => 'text',      'section' => 'Content', 'col_span' => 2],
+                ['key' => 'body',         'label' => 'Body',         'type' => 'rich-text', 'section' => 'Content', 'col_span' => 2],
+            ],
+
+            'filters' => [
+                [
+                    'key'     => 'status',
+                    'label'   => 'Status',
+                    'type'    => 'select',
+                    'options' => [
+                        ['label' => 'Draft',     'value' => 'draft'],
+                        ['label' => 'Published', 'value' => 'published'],
+                        ['label' => 'Archived',  'value' => 'archived'],
+                    ],
+                ],
+                ['key' => 'is_featured', 'label' => 'Featured', 'type' => 'boolean'],
+                ['key' => 'created_at',  'label' => 'Created',  'type' => 'date_range'],
+            ],
+
+            'fields' => [
+                [
+                    'key'      => 'title',
+                    'label'    => 'Title',
+                    'type'     => 'text',
+                    'rules'    => 'required|string|max:255',
+                    'required' => true,
+                    'section'  => 'Basic',
+                ],
+                [
+                    'key'       => 'slug',
+                    'label'     => 'URL Slug',
+                    'type'      => 'slug',
+                    'slug_from' => 'title',
+                    'rules'     => 'required|string|max:255|unique:posts,slug,{id}',
+                    'required'  => true,
+                    'section'   => 'Basic',
+                ],
+                [
+                    'key'     => 'status',
+                    'label'   => 'Status',
+                    'type'    => 'select',
+                    'rules'   => 'required|in:draft,published,archived',
+                    'default' => 'draft',
+                    'options' => [
+                        ['label' => 'Draft',     'value' => 'draft'],
+                        ['label' => 'Published', 'value' => 'published'],
+                        ['label' => 'Archived',  'value' => 'archived'],
+                    ],
+                    'required' => true,
+                    'section'  => 'Basic',
+                ],
+                [
+                    'key'          => 'published_at',
+                    'label'        => 'Publish Date',
+                    'type'         => 'datetime',
+                    'rules'        => 'nullable|date',
+                    'section'      => 'Basic',
+                    'visible_when' => ['field' => 'status', 'equals' => 'published'],
+                ],
+                [
+                    'key'         => 'is_featured',
+                    'label'       => 'Featured Post',
+                    'type'        => 'toggle',
+                    'default'     => false,
+                    'placeholder' => 'Highlight this post on the homepage',
+                    'section'     => 'Basic',
+                    'col_span'    => 2,
+                ],
+                [
+                    'key'         => 'cover',
+                    'label'       => 'Cover Image',
+                    'type'        => 'image',
+                    'rules'       => 'nullable|image|max:4096',
+                    'disk'        => 'public',
+                    'directory'   => 'posts/covers',
+                    'path_column' => 'cover_path',
+                    'delete_old'  => true,
+                    'section'     => 'Media',
+                ],
+                [
+                    'key'     => 'tags',
+                    'label'   => 'Tags',
+                    'type'    => 'tags',
+                    'rules'   => 'nullable|array',
+                    'help'    => 'Press Enter or comma to add tags.',
+                    'section' => 'Media',
+                ],
+                [
+                    'key'      => 'excerpt',
+                    'label'    => 'Excerpt',
+                    'type'     => 'textarea',
+                    'rules'    => 'nullable|string|max:500',
+                    'section'  => 'Content',
+                    'col_span' => 2,
+                ],
+                [
+                    'key'      => 'body',
+                    'label'    => 'Body (Markdown)',
+                    'type'     => 'rich-text',
+                    'rules'    => 'nullable|string',
+                    'section'  => 'Content',
+                    'col_span' => 2,
+                ],
+            ],
+        ];
+    }
+}

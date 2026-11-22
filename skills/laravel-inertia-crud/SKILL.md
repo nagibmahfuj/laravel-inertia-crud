@@ -58,3 +58,4 @@ Index.layout = (page: any) => (
 Read these reference files when configuring advanced options:
 - [references/resource-config.md](references/resource-config.md) — All `resourceConfig()` keys, 15 column types, 22 field types, filters, sections/grid, `visible_when`, `show_fields`, `stats`, `form_mode`, `custom_actions`, and `SoftDeletes`.
 - [references/uploads-and-imports.md](references/uploads-and-imports.md) — `chunked-file`, standard `file`/`image`, async `relationship` options, sync/queued CSV imports, events, and CLI commands.
+

@@ -1,0 +1,125 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use NagibMahfuj\Crud\CrudController;
+
+class UserController extends CrudController
+{
+    protected function resourceConfig(): array
+    {
+        return [
+            'model'             => User::class,
+            'resource_name'     => 'User',
+            'resource_plural'   => 'Users',
+            'title'             => 'Users',
+            'description'       => 'Manage application users and dashboard roles.',
+            'route_prefix'      => 'users',
+            'page_prefix'       => '{{ pagePrefix }}',
+            'per_page'          => 15,
+            'default_sort'      => 'id',
+            'default_direction' => 'desc',
+            'searchable'        => ['name', 'email'],
+            'row_selection'     => true,
+            'form_columns'      => 2,
+            'actions'           => ['create', 'edit', 'delete', 'show', 'export'],
+
+            'stats' => fn ($query) => [
+                [
+                    'title' => 'Total Users',
+                    'value' => (clone $query)->count(),
+                    'icon'  => 'Users',
+                ],
+                [
+                    'title' => 'Admins',
+                    'value' => (clone $query)->whereIn('role', ['super_admin', 'admin'])->count(),
+                    'icon'  => 'Shield',
+                ],
+                [
+                    'title' => 'Viewers',
+                    'value' => (clone $query)->where('role', 'viewer')->count(),
+                    'icon'  => 'Eye',
+                ],
+            ],
+
+            'columns' => [
+                ['key' => 'id',         'label' => 'ID',      'sortable' => true, 'type' => 'number'],
+                ['key' => 'name',       'label' => 'Name',    'sortable' => true, 'type' => 'text'],
+                ['key' => 'email',      'label' => 'Email',   'sortable' => true, 'type' => 'copyable'],
+                ['key' => 'role',       'label' => 'Role',    'sortable' => true, 'type' => 'badge'],
+                ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'type' => 'datetime'],
+            ],
+
+            'show_fields' => [
+                ['key' => 'name',       'label' => 'Full Name', 'type' => 'text',     'section' => 'Account'],
+                ['key' => 'email',      'label' => 'Email',     'type' => 'copyable', 'section' => 'Account'],
+                ['key' => 'role',       'label' => 'Role',      'type' => 'badge',    'section' => 'Account'],
+                ['key' => 'created_at', 'label' => 'Joined',    'type' => 'datetime', 'section' => 'Activity'],
+                ['key' => 'updated_at', 'label' => 'Updated',   'type' => 'datetime', 'section' => 'Activity'],
+            ],
+
+            'filters' => [
+                [
+                    'key'     => 'role',
+                    'label'   => 'Role',
+                    'type'    => 'select',
+                    'options' => [
+                        ['label' => 'Super Admin', 'value' => 'super_admin'],
+                        ['label' => 'Admin',       'value' => 'admin'],
+                        ['label' => 'Manager',     'value' => 'manager'],
+                        ['label' => 'Viewer',      'value' => 'viewer'],
+                    ],
+                ],
+                ['key' => 'created_at', 'label' => 'Joined', 'type' => 'date_range'],
+            ],
+
+            'fields' => [
+                [
+                    'key'      => 'name',
+                    'label'    => 'Full Name',
+                    'type'     => 'text',
+                    'rules'    => 'required|string|max:255',
+                    'required' => true,
+                ],
+                [
+                    'key'      => 'email',
+                    'label'    => 'Email Address',
+                    'type'     => 'email',
+                    'rules'    => 'required|email|max:255|unique:users,email,{id}',
+                    'required' => true,
+                ],
+                [
+                    'key'     => 'role',
+                    'label'   => 'Role',
+                    'type'    => 'select',
+                    'rules'   => 'required|in:super_admin,admin,manager,viewer',
+                    'default' => 'viewer',
+                    'options' => [
+                        ['label' => 'Super Admin', 'value' => 'super_admin'],
+                        ['label' => 'Admin',       'value' => 'admin'],
+                        ['label' => 'Manager',     'value' => 'manager'],
+                        ['label' => 'Viewer',      'value' => 'viewer'],
+                    ],
+                    'required' => true,
+                ],
+                [
+                    'key'                => 'password',
+                    'label'              => 'Password',
+                    'type'               => 'password',
+                    'rules'              => 'required|string|min:8',
+                    'optional_on_update' => true,
+                    'help'               => 'Leave blank when editing to keep the current password.',
+                ],
+            ],
+        ];
+    }
+
+    protected function beforeSave($model, array $data, string $action): void
+    {
+        if (!empty($data['password'])) {
+            $model->password = Hash::make($data['password']);
+        }
+    }
+}

@@ -1,0 +1,171 @@
+<?php
+
+namespace {{ namespace }};
+
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
+use NagibMahfuj\Crud\CrudController;
+
+class UserController extends CrudController
+{
+    protected function resourceConfig(): array
+    {
+        return [
+            'model'             => User::class,
+            'resource_name'     => 'User',
+            'resource_plural'   => 'Users',
+            'title'             => 'Users',
+            'description'       => 'Manage application users and Spatie roles.',
+            'route_prefix'      => 'users',
+            'page_prefix'       => '{{ pagePrefix }}',
+            'per_page'          => 15,
+            'default_sort'      => 'id',
+            'default_direction' => 'desc',
+            'searchable'        => ['name', 'email'],
+            'with'              => ['roles'],
+            'row_selection'     => true,
+            'form_columns'      => 2,
+            'actions'           => ['create', 'edit', 'delete', 'show', 'export'],
+
+            'stats' => fn ($query) => [
+                [
+                    'title' => 'Total Users',
+                    'value' => (clone $query)->count(),
+                    'icon'  => 'Users',
+                ],
+                [
+                    'title' => 'Admins',
+                    'value' => (clone $query)->whereHas('roles', fn ($q) => $q->whereIn('name', ['super_admin', 'admin']))->count(),
+                    'icon'  => 'Shield',
+                ],
+                [
+                    'title' => 'Verified',
+                    'value' => (clone $query)->whereNotNull('email_verified_at')->count(),
+                    'icon'  => 'CheckCircle',
+                ],
+            ],
+
+            'columns' => [
+                ['key' => 'id',    'label' => 'ID',    'sortable' => true, 'type' => 'number'],
+                ['key' => 'name',  'label' => 'Name',  'sortable' => true, 'type' => 'text'],
+                ['key' => 'email', 'label' => 'Email', 'sortable' => true, 'type' => 'copyable'],
+                [
+                    'key'            => 'role_names',
+                    'label'          => 'Roles',
+                    'sortable'       => false,
+                    'type'           => 'tags',
+                    'display_format' => fn ($record) => $record->roles->pluck('name')->values()->all(),
+                    'export_format'  => fn ($record) => $record->roles->pluck('name')->implode(', '),
+                ],
+                ['key' => 'created_at', 'label' => 'Created', 'sortable' => true, 'type' => 'datetime'],
+            ],
+
+            'show_fields' => [
+                ['key' => 'name',  'label' => 'Full Name', 'type' => 'text',     'section' => 'Account'],
+                ['key' => 'email', 'label' => 'Email',     'type' => 'copyable', 'section' => 'Account'],
+                [
+                    'key'            => 'role_names',
+                    'label'          => 'Roles',
+                    'type'           => 'tags',
+                    'section'        => 'Account',
+                    'display_format' => fn ($record) => $record->roles->pluck('name')->values()->all(),
+                ],
+                ['key' => 'created_at', 'label' => 'Joined',  'type' => 'datetime', 'section' => 'Activity'],
+                ['key' => 'updated_at', 'label' => 'Updated', 'type' => 'datetime', 'section' => 'Activity'],
+            ],
+
+            'filters' => [
+                [
+                    'key'      => 'role',
+                    'label'    => 'Role',
+                    'type'     => 'select',
+                    'column'   => 'name',
+                    'relation' => 'roles',
+                    'options'  => fn () => class_exists(\Spatie\Permission\Models\Role::class)
+                        ? \Spatie\Permission\Models\Role::query()->orderBy('name')->pluck('name', 'name')->toArray()
+                        : ['super_admin' => 'super_admin', 'admin' => 'admin', 'manager' => 'manager', 'viewer' => 'viewer'],
+                ],
+                ['key' => 'created_at', 'label' => 'Joined', 'type' => 'date_range'],
+            ],
+
+            'fields' => [
+                [
+                    'key'      => 'name',
+                    'label'    => 'Full Name',
+                    'type'     => 'text',
+                    'rules'    => 'required|string|max:255',
+                    'required' => true,
+                ],
+                [
+                    'key'      => 'email',
+                    'label'    => 'Email Address',
+                    'type'     => 'email',
+                    'rules'    => 'required|email|max:255|unique:users,email,{id}',
+                    'required' => true,
+                ],
+                [
+                    'key'            => 'role_names',
+                    'label'          => 'Roles',
+                    'type'           => 'select',
+                    'multiple'       => true,
+                    'ignore_on_save' => true,
+                    'rules'          => 'nullable|array',
+                    'default'        => ['viewer'],
+                    'options'        => fn () => class_exists(\Spatie\Permission\Models\Role::class)
+                        ? \Spatie\Permission\Models\Role::query()->orderBy('name')->pluck('name', 'name')->toArray()
+                        : ['super_admin' => 'super_admin', 'admin' => 'admin', 'manager' => 'manager', 'viewer' => 'viewer'],
+                    'help' => 'Assigned Spatie roles for this user.',
+                ],
+                [
+                    'key'                => 'password',
+                    'label'              => 'Password',
+                    'type'               => 'password',
+                    'rules'              => 'required|string|min:8',
+                    'optional_on_update' => true,
+                    'help'               => 'Leave blank when editing to keep the current password.',
+                ],
+            ],
+        ];
+    }
+
+    public function edit(int|string $id)
+    {
+        $config = $this->resourceConfig();
+        $model  = $this->baseQuery()->findOrFail($id);
+
+        $this->authorize('update', $model);
+
+        if (method_exists($model, 'getRoleNames')) {
+            $model->setAttribute('role_names', $model->getRoleNames()->values()->all());
+        }
+
+        $fields  = $this->crud->prepareFieldsForFrontend($config['fields'] ?? [], 'edit', $model);
+        $payload = [
+            'meta'   => $this->crud->buildMeta($config, 'edit', $model),
+            'fields' => $fields,
+            'record' => $model,
+            'mode'   => 'edit',
+        ];
+
+        if (request()->header('X-Crud-Form') === '1') {
+            return response()->json($payload);
+        }
+
+        return Inertia::render($this->pagePrefix() . '/Form', $payload);
+    }
+
+    protected function beforeSave($model, array $data, string $action): void
+    {
+        if (!empty($data['password'])) {
+            $model->password = Hash::make($data['password']);
+        }
+    }
+
+    protected function afterSave($model, array $data, string $action): void
+    {
+        if (array_key_exists('role_names', $data) && method_exists($model, 'syncRoles')) {
+            $model->syncRoles((array) $data['role_names']);
+        }
+    }
+}

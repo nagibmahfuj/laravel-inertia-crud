@@ -4,12 +4,30 @@
 
 ### `php artisan crud:install`
 
-Guided setup command that publishes `config/crud.php`, frontend components/hooks/theme, optional stubs, optional portable AI Agent Skill (`.agents/skills/`), and audits `package.json` + `resources/js/components/ui/` to report any missing npm packages or shadcn/ui components.
+Guided setup command that publishes `config/crud.php`, frontend components/hooks/theme, optional stubs, optional portable AI Agent Skill (`.agents/skills/`), audits `package.json` + `resources/js/components/ui/`, and optionally bootstraps a complete working starter CRUD setup on fresh Laravel React apps.
 
 ```bash
+# Standard install (config + assets + prerequisite check)
 php artisan crud:install
-php artisan crud:install --stubs --ai --force
+
+# Guided starter wizard (pick role system, starter CRUD resources, app wiring & deps)
+php artisan crud:install --starter
+
+# Scriptable non-interactive starter bootstrap
+php artisan crud:install --starter --roles=column --examples=users,posts --wire-app --install-deps --ai --no-interaction
 ```
+
+| Option | Description |
+| --- | --- |
+| `--starter` | Launch the interactive starter bootstrapper (role system, example CRUDs, app wiring, and optional dependency install) |
+| `--roles=` | Role system to scaffold: `column` (`users.role` migration + seeder), `spatie` (`HasRoles` trait + Spatie seeder), or `none` |
+| `--examples=` | Comma-separated starter CRUD resources to scaffold: `users`, `posts`, `users,posts`, or `none` |
+| `--wire-app` | Idempotently wire `HandleInertiaRequests.php`, `app-layout.tsx`, `app.tsx`, `app-sidebar.tsx`, and `routes/console.php` |
+| `--install-deps` | Automatically install missing npm packages, shadcn/ui components, and `spatie/laravel-permission` (when `--roles=spatie`) |
+| `--stubs` | Also publish customizable generator stubs to `stubs/crud/` |
+| `--ai` | Also publish the portable AI Agent Skill to `.agents/skills/laravel-inertia-crud/` |
+| `--force` | Overwrite existing published files |
+| `--no-assets` | Skip publishing React/TypeScript frontend assets |
 
 ---
 

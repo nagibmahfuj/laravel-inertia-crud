@@ -20,7 +20,7 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 - **Sync & Background Queued CSV Imports**: Streaming CSV import engine with `sync`/`queued`/`auto` modes, chunked-upload CSV support, Cache progress polling (`/crud/imports/{id}/status`), downloadable failed-rows CSV (`/crud/imports/{id}/errors`), auto sample CSV (`GET {uri}/import-sample`), and `CrudImportCompleted`/`CrudImportFailed` events
 - **Rich Form Layouts & 22 Field Types**: Card sections, 2-column grid (`form_columns` / `col_span`), `help` text, conditional `visible_when`, Modal/Drawer form mode (`form_mode`), lazy Closure options, signed async relationship selects (`/crud/options`), plus `image`, `slug`, `tags`, `radio`, `color`, `key-value`, and zero-dependency Markdown `rich-text`
 - **Soft Deletes & Table UX**: Auto-detected `SoftDeletes` trash filter + `restore`/`forceDestroy`/`bulkRestore`/`bulkForceDestroy`, `localStorage`-persisted column visibility toggle (`default_hidden`), KPI `StatCard` stats row, and 15 column types (`copyable`, `currency`, `link`, `tags`, `truncate`, `toggle`, etc.)
-- **Full Artisan CLI Toolkit**: `crud:install` (guided setup + prerequisite check), `crud:generate` (scaffolds controllers, policies, `Index.tsx`, `Form.tsx`, `Show.tsx`), `crud:doctor` (health audit), and `crud:cleanup-chunks`
+- **Full Artisan CLI Toolkit**: `crud:install` (with interactive `--starter` bootstrapper for column/Spatie roles, `Users`/`Posts` starter CRUDs, app wiring & dependency install), `crud:generate` (scaffolds controllers, policies, `Index.tsx`, `Form.tsx`, `Show.tsx`), `crud:doctor` (health audit), and `crud:cleanup-chunks`
 - **Role-Based Permissions & Spatie**: Configurable per-resource `roles`, `read_only`, `create_only`, and `no_delete` overrides with automatic `spatie/laravel-permission` detection
 - **Laravel 11 / 12 / 13 & Inertia v1 / v2 / v3** compatible
 
@@ -62,9 +62,16 @@ The service provider automatically registers `Route::crudResource()`, native chu
 ### 2. Run the guided installer
 
 ```bash
+# Minimal install (publishes config + frontend components & audits prerequisites)
 php artisan crud:install
-# Optionally also publish stubs & portable AI Agent Skill:
-php artisan crud:install --stubs --ai
+
+# Turnkey starter bootstrap for a fresh `laravel new my-app --react` app:
+# lets you pick your role system (users.role column or Spatie) and starter CRUDs (Users / Posts),
+# wires layouts/toasts/sidebar/HandleInertiaRequests, and optionally installs missing npm/shadcn deps
+php artisan crud:install --starter
+
+# Or non-interactive with explicit flags:
+php artisan crud:install --starter --roles=column --examples=users --wire-app --install-deps --ai --no-interaction
 ```
 
 `crud:install` publishes `config/crud.php`, all React/TypeScript components (`resources/js/components/crud/`), theme (`resources/js/lib/crud-theme.ts`), and navigation hook (`resources/js/hooks/use-nav-items.ts`), and audits `package.json` + `resources/js/components/ui/` for missing npm or shadcn/ui prerequisites.

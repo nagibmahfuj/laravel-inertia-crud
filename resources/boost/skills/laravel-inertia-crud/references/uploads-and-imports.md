@@ -91,7 +91,7 @@
 
 ## Artisan Commands
 
-- `php artisan crud:install [--stubs] [--ai] [--force]` — Publish config, frontend assets, optional stubs/AI skill, and audit npm/shadcn prerequisites.
+- `php artisan crud:install [--starter] [--roles=column|spatie|none] [--examples=users,posts|none] [--wire-app] [--install-deps] [--stubs] [--ai] [--force]` — Publish config, frontend assets, optional stubs/AI skill, audit npm/shadcn prerequisites, and optionally bootstrap roles, starter `Users`/`Posts` CRUDs, and React starter-kit wiring.
 - `php artisan crud:generate` — Interactive 7-step wizard (or `--model=... --all --actions=...`).
 - `php artisan crud:doctor` — Audits config, native routes, queue driver, storage writability, and every `CrudController`.
 - `php artisan crud:cleanup-chunks [--hours=6]` — Prunes stale temporary chunks and unclaimed uploads.

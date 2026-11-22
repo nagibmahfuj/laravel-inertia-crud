@@ -1,0 +1,26 @@
+<?php
+
+namespace {{ namespace }};
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use NagibMahfuj\Crud\BaseCrudPolicy;
+
+class UserPolicy extends BaseCrudPolicy
+{
+    protected function resourceKey(): string
+    {
+        return 'users';
+    }
+
+    /**
+     * Prevent users from deleting their own account.
+     */
+    public function delete(Authenticatable $user, $model): bool
+    {
+        if ((string) $user->getAuthIdentifier() === (string) $model->getKey()) {
+            return false;
+        }
+
+        return parent::delete($user, $model);
+    }
+}
