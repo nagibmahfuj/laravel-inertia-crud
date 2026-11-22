@@ -57,6 +57,9 @@ Your Laravel app must have the following installed (standard in Laravel React/Ty
 composer require nagibmahfuj/laravel-inertia-crud:^2.0
 ```
 
+> [!TIP]
+> **Fresh Laravel starter kits with Laravel Boost:** If `composer require` stops at `post-update-cmd` with `Please set up Boost with [php artisan boost:install] first.` (or leaves `"*"` in `composer.json`), run `php artisan boost:install` once (which also imports this package's Boost guidelines & skill) — or remove `@php artisan boost:update --ansi` from `composer.json` if not using Boost — then re-run `composer require nagibmahfuj/laravel-inertia-crud:^2.0`.
+
 The service provider automatically registers `Route::crudResource()`, native chunk upload (`/crud/chunk-upload`), async options (`/crud/options`), background import (`/crud/imports/{id}/status|errors`) routes, and Artisan commands (`crud:install`, `crud:generate`, `crud:doctor`, `crud:cleanup-chunks`).
 
 ### 2. Run the guided installer

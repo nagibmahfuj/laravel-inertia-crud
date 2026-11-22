@@ -31,6 +31,12 @@ Your Laravel React/TypeScript app should include:
 composer require nagibmahfuj/laravel-inertia-crud:^2.0
 ```
 
+::: tip Fresh Laravel Starter Kits with Laravel Boost
+Recent Laravel starter kits include `laravel/boost` with `@php artisan boost:update --ansi` in `composer.json`'s `post-update-cmd`. On a brand-new project where Boost hasn't been initialized yet, `composer require` may stop with `Please set up Boost with [php artisan boost:install] first.` (and leave `"*"` in `composer.json` if no version constraint was passed).
+
+Run `php artisan boost:install` once first (which also auto-discovers this package's `resources/boost/` AI guidelines & skill), or remove the `boost:update` hook if you don't use Boost, then run `composer require nagibmahfuj/laravel-inertia-crud:^2.0`.
+:::
+
 Laravel auto-discovers `NagibMahfuj\Crud\CrudServiceProvider`, registering:
 - `Route::crudResource()` macro
 - Native chunk upload endpoints (`POST /crud/chunk-upload`, `DELETE /crud/chunk-upload/{uploadId}`)

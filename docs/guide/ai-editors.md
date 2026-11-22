@@ -11,6 +11,10 @@ The Composer package ships Boost guidelines and a structured package skill direc
 
 When your Laravel project runs `php artisan boost:install` (or `boost:update`), Laravel Boost automatically discovers and registers them with no extra configuration.
 
+::: tip Fresh Laravel Starter Kits
+If `composer require nagibmahfuj/laravel-inertia-crud` reports `Please set up Boost with [php artisan boost:install] first.` during `post-update-cmd`, run `php artisan boost:install` once and re-run `composer require nagibmahfuj/laravel-inertia-crud:^2.0`.
+:::
+
 ---
 
 ## 2. Portable Agent Skill (`.agents/skills/`)
