@@ -27,7 +27,7 @@ In `store()` and `update()`, `CrudController` executes in this order:
 1. Policy authorization (`create` / `update`)
 2. Validation (`buildValidationRules()`)
 3. `fillModel()`
-4. `processChunkedFiles()` (so `beforeSave()` already sees resolved file paths)
+4. `processUploadedFiles()` (handles standard `file`, `image`, and `chunked-file` uploads so `beforeSave()` already sees resolved file paths)
 5. Audit columns (`created_by` / `updated_by` if fillable)
 6. `beforeSave($model, $data, $action)`
 7. `$model->save()`
@@ -46,9 +46,23 @@ protected function baseQuery()
 }
 ```
 
+### KPI Stats Hook (`stats()`)
+
+In addition to defining `'stats' => fn ($query) => [...]` inside `resourceConfig()`, you can override `stats($baseQuery)` directly on your controller:
+
+```php
+protected function stats($baseQuery): array
+{
+    return [
+        ['title' => 'Total',     'value' => (clone $baseQuery)->count(), 'icon' => 'Package'],
+        ['title' => 'Published', 'value' => (clone $baseQuery)->where('status', 'published')->count(), 'icon' => 'CheckCircle'],
+    ];
+}
+```
+
 ### UUID & ULID Primary Keys
 
-`CrudController` type-hints `int|string $id` on `show()`, `edit()`, `update()`, and `destroy()`, and `bulkDestroy()` uses `whereKey()`, so UUID and ULID models work without any controller overrides.
+`CrudController` type-hints `int|string $id` on `show()`, `edit()`, `update()`, `destroy()`, `restore()`, and `forceDestroy()`, and bulk endpoints (`bulkDestroy()`, `bulkRestore()`, `bulkForceDestroy()`, `handleAction()`) use `whereKey()`, so UUID and ULID models work without any controller overrides.
 
 ---
 
@@ -100,15 +114,40 @@ Index.layout = (page: any) => (
 );
 ```
 
-### Extra Form Sections (`children`)
+### Extra Form Sections (`children`) & Embedded Modal/Drawer Props
 
-Pass custom JSX inside `<ResourceForm>` to append extra UI below config-generated fields:
+Pass custom JSX inside `<ResourceForm>` to append extra UI below config-generated fields, or render it embedded inside a custom dialog/drawer:
 
 ```tsx
-<ResourceForm {...props}>
+<ResourceForm
+    {...props}
+    embedded
+    onSuccess={() => setOpen(false)}
+    onCancel={() => setOpen(false)}
+>
     <div className="rounded-lg border p-4 text-sm text-muted-foreground">
         Changes will notify subscribed kiosks immediately.
     </div>
 </ResourceForm>
+```
+
+### Customizing `ResourceShow` (`fieldOverrides`, `headerActions`, `children`)
+
+```tsx
+<ResourceShow
+    {...props}
+    fieldOverrides={{
+        status: (value) => <Badge variant="secondary">{String(value)}</Badge>,
+    }}
+    headerActions={
+        <Button type="button" size="sm" variant="outline">
+            Print Invoice
+        </Button>
+    }
+>
+    <div className="rounded-lg border p-4 text-sm">
+        Related activity timeline or audit log...
+    </div>
+</ResourceShow>
 ```
 

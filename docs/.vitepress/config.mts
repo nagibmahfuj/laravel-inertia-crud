@@ -47,9 +47,9 @@ const sidebarGroups = [
     text: 'Core Features',
     items: [
       { text: 'Columns, Search & Filters', link: '/guide/columns-and-filters' },
-      { text: 'Form Fields & Validation', link: '/guide/form-fields' },
+      { text: 'Form Fields, Layouts & Validation', link: '/guide/form-fields' },
       { text: 'Chunked File Uploads', link: '/guide/chunked-uploads' },
-      { text: 'Actions, Export & Import', link: '/guide/actions-import-export' },
+      { text: 'Actions, Export, Import & Soft Deletes', link: '/guide/actions-import-export' },
       { text: 'Permissions & Roles', link: '/guide/permissions' },
       { text: 'Navigation, Layouts & Theming', link: '/guide/navigation-and-theming' },
       { text: 'Customization & Hooks', link: '/guide/customization' },
@@ -61,6 +61,7 @@ const sidebarGroups = [
       { text: 'Configuration (config/crud.php)', link: '/reference/configuration' },
       { text: 'React Components & Types', link: '/reference/components-and-types' },
       { text: 'Artisan Commands & Publish Tags', link: '/reference/artisan-commands' },
+      { text: 'AI Code Editors & Laravel Boost', link: '/guide/ai-editors' },
     ],
   },
   {

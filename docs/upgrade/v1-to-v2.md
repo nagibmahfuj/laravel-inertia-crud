@@ -7,11 +7,13 @@ This guide covers every breaking change, new capability, and recommended cleanup
 | Area | v1.x Behavior | v2.0 Behavior | Impact |
 | --- | --- | --- | --- |
 | **Export & Import Visibility** | Controlled by `exportRoute` and `importRoute` props in `Index.tsx` | Controlled by `'export'` and `'import'` in `resourceConfig()['actions']` (policy-filtered) | **Breaking** — add `'export'` / `'import'` to `'actions'` |
-| **Export Backend Access** | `GET /{resource}/export` always callable when policy allowed `export` | Returns `403 Forbidden` unless `'export'` is in `resourceConfig()['actions']` | **Breaking** — add `'export'` to `'actions'` |
-| **`ResourceIndex` Layout** | Wrapped output in `<AppLayout>` internally | Returns fragment (`<>...</>`) without `<AppLayout>`, matching `ResourceForm` | **Breaking** if `Index.tsx` did not define `Index.layout` |
+| **Export & Import Backend Access** | `GET /{resource}/export` callable when policy allowed `export`; no built-in `import()` | `GET /{resource}/export`, `POST /{resource}/import`, and `GET /{resource}/import-sample` return `403 Forbidden` unless enabled in `resourceConfig()['actions']` | **Breaking** — add `'export'` / `'import'` to `'actions'` |
+| **`ResourceIndex` Layout** | Wrapped output in `<AppLayout>` internally | Returns fragment (`<>...</>`) without `<AppLayout>`, matching `ResourceForm` and `ResourceShow` | **Breaking** if `Index.tsx` did not define `Index.layout` |
 | **Normalized Props** | `title`, `baseRoute`, `exportRoute`, `importRoute`, `submitRoute`, `indexRoute`, `breadcrumbs` passed manually | Provided automatically via `meta` from `resourceConfig()` | Optional cleanup (recommended) |
+| **Built-In CSV Import (`import_accept`)** | Manual `import()` method; default `import_accept` was `'.csv,.xlsx,.xls'` | Built-in sync & queued CSV engine (`CsvImportService`); default `import_accept` is `'.csv,.txt'` | Set `'import_accept' => '.csv,.xlsx'` if using a custom Excel override |
 | **Chunked File Uploads** | Manual routes + per-controller `chunkUpload()` and `beforeSave()` logic | Native `/crud/chunk-upload` endpoint + config-driven `chunked-file` field | Optional migration |
-| **`CrudController` ID Type-Hint** | `show(int $id)`, `edit(int $id)`, `update(Request $request, int $id)`, `destroy(int $id)` | `int\|string $id` (supports UUID/ULID models) | **Check subclass overrides** — widen `int $id` to `int\|string $id` |
+| **`CrudController` ID Type-Hint** | `show(int $id)`, `edit(int $id)`, `update(Request $request, int $id)`, `destroy(int $id)` | `int\|string $id` on `show`, `edit`, `update`, `destroy`, `restore`, `forceDestroy` (supports UUID/ULID models) | **Check subclass overrides** — widen `int $id` to `int\|string $id` |
+| **`CrudService::buildMeta()` Signature** | `buildMeta(array $config)` | `buildMeta(array $config, string $context = 'index', ?Model $record = null, ?Request $request = null)` | Backwards-compatible (new params optional) |
 | **Pagination & DatePicker** | First/Last buttons pointed at Prev/Next; `DatePicker` used `initialFocus` | Uses `first_page_url`/`last_page_url` and `autoFocus` (`react-day-picker` v9/v10) | Re-publish frontend assets |
 
 ---
@@ -53,17 +55,48 @@ Add the new v2 keys to your published `config/crud.php`:
     'ttl_hours'          => 6,
     'allowed_extensions' => [],
 ],
+
+'options' => [
+    'enabled'    => true,
+    'route'      => '/crud/options',
+    'route_name' => 'crud.options',
+    'middleware' => ['web', 'auth'],
+    'limit'      => 25,
+    'ttl_hours'  => 6,
+],
+
+'import' => [
+    'enabled'            => true,
+    'route'              => '/crud/imports',
+    'route_name'         => 'crud.import',
+    'middleware'         => ['web', 'auth'],
+    'mode'               => 'auto',      // 'sync' | 'queued' | 'auto'
+    'queue_threshold_kb' => 1024,
+    'queue'              => null,
+    'connection'         => null,
+    'chunk_size'         => 500,
+    'disk'               => 'local',
+    'temp_directory'     => 'crud-imports',
+    'status_ttl_hours'   => 24,
+    'max_errors_sample'  => 50,
+    'tries'              => 3,
+    'timeout'            => 600,
+],
 ```
 
-### 3. Re-publish Frontend Components & Stubs
+### 3. Re-publish Frontend Components & Run Doctor
 
 ```bash
-php artisan vendor:publish --tag=crud-assets --force
-php artisan vendor:publish --tag=crud-stubs --force
+php artisan crud:install --stubs --force
+# Or selectively:
+# php artisan vendor:publish --tag=crud-assets --force
+# php artisan vendor:publish --tag=crud-stubs --force
+
+php artisan crud:doctor
 ```
 
 ::: warning Review Local Diffs
-If you previously edited files inside `resources/js/components/crud/`, run `git diff` after publishing to preserve any project-specific customizations.
+If you previously edited files inside `resources/js/components/crud/`, run `git diff` after publishing to preserve any project-specific customizations. New files added in v2 include `ResourceShow.tsx`, `ChunkedFileInput.tsx`, `icon-map.ts`, `types.ts`, and `index.ts`.
 :::
 
 ### 4. Add `'export'` and `'import'` to `actions`
@@ -191,4 +224,16 @@ Form.layout = (page: any) => (
 3. Delete boilerplate `chunkUpload()`, `processUploadedBinary()`, and `cleanupOldCompletedUploads()` methods from your controllers.
 4. For custom pages using `<ChunkedFileInput />` standalone, remove the hardcoded `endpoint` prop (now defaults to `/crud/chunk-upload`) and resolve tokens via `app(\NagibMahfuj\Crud\Services\ChunkUploadService::class)->resolveToken($token)`.
 5. Optionally schedule `Schedule::command('crud:cleanup-chunks')->hourly();` in `routes/console.php`.
+
+---
+
+### 8. Optional New v2 Capabilities to Adopt
+
+Once upgraded, you can progressively adopt any of the new zero-boilerplate v2 features:
+- **Detail Views (`ResourceShow`):** Add `'show'` to `actions`, optional `show_fields`, and scaffold `Show.tsx`.
+- **Auto-Handled `file` & `image` Fields:** Add `disk`, `directory`, `path_column`, and `delete_old` directly on `file`/`image` fields and remove manual upload code in `beforeSave()`.
+- **Lazy & Async Relationship Selects:** Convert heavy eager `Model::pluck(...)` calls in `resourceConfig()` to `'options' => fn () => ...` or `'relationship' => ['model' => ..., 'async' => true]`.
+- **Sync & Background Queued CSV Imports:** Configure `'import' => [...]` directly in `resourceConfig()` (ensure `HandleInertiaRequests` shares `flash.data` for live progress polling).
+- **KPI Stats, SoftDeletes, Custom Actions & Modal/Drawer Forms:** Add `'stats'`, `'custom_actions'`, `'form_mode' => 'drawer'|'modal'`, grouped `form_sections` / `form_columns => 2`, and `visible_when` conditional fields.
+- **AI Editor Skill:** Run `php artisan crud:install --ai` (or let Laravel Boost auto-discover `resources/boost/`).
 

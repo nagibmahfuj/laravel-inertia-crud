@@ -83,11 +83,24 @@ Show.layout = (page: any) => (
 | `custom_actions` | `array[]` | Declarative row and bulk actions with confirmation & policy checks |
 | `row_selection` | `bool` | Enables checkboxes, `bulkDestroy`, `bulkRestore`, `bulkForceDestroy`, & bulk custom actions |
 | `import` | `array` | Config-driven sync/queued CSV import engine ([see Actions, Export & Import](/guide/actions-import-export)) |
+| `import_format_url` / `import_accept` / `import_max_size_mb` | `string\|int` | Optional overrides for import template link, accepted file types (default `'.csv,.txt'`), and max upload size in MB (default `100`) |
+| `create_route` / `export_route` / `import_route` / `bulk_*_route` | `string\|null` | Optional URL overrides (auto-resolved from `route_prefix` / `base_route` by default) |
 | `columns` | `array[]` | Index table & CSV export column definitions |
-| `show_fields` | `array[]` | Optional detail-page field layout for `ResourceShow` (falls back to `columns`) |
+| `show_fields` | `array[]` | Optional detail-page field layout for `ResourceShow` (falls back to `columns` / `fields`) |
 | `filters` | `array[]` | `FilterBar` definitions (supports lazy Closure & async relationship options) |
 | `fields` | `array[]` | `ResourceForm` field definitions |
 | `breadcrumbs` | `array\|null` | Custom base breadcrumb trail (Create/Edit/Details auto-appended) |
+
+---
+
+## Normalized `meta` Contract
+
+`CrudService::buildMeta()` automatically builds and sends a normalized `meta` object to `Index.tsx`, `Form.tsx`, `Show.tsx`, and `AppLayout`:
+
+- **Identity & Titles:** `resource_name`, `resource_plural`, `title`, `description`, `route_prefix`, `base_route`
+- **Resolved Routes (`meta.routes`):** `index`, `create`, `store`, `update`, `export`, `import`, `import_sample`, `bulk_destroy`, `bulk_restore`, `bulk_force_destroy`, `action_base`, `chunk_upload`
+- **Layout & UX:** `breadcrumbs`, `form_mode`, `form_columns`, `form_sections`, `soft_deletes`, `row_selection`, `per_page`, `default_separator`
+- **Permissions & Schema:** Policy-filtered `actions`, `custom_actions`, `columns`, `filters`, plus `import_format_url`, `import_accept`, `import_max_size_mb`, `import_chunked`, and `import_mode`
 
 ---
 
@@ -97,10 +110,17 @@ Return KPI summary cards from either `resourceConfig()['stats']` or by overridin
 
 ```php
 'stats' => fn ($query) => [
-    ['title' => 'Total Products', 'value' => (clone $query)->count(), 'icon' => 'Package'],
+    ['title' => 'Total Products', 'value' => (clone $query)->count(), 'icon' => 'Package', 'description' => 'All catalog items'],
     ['title' => 'Active',         'value' => (clone $query)->where('is_active', true)->count(), 'change' => 12, 'icon' => 'CheckCircle'],
 ],
 ```
+
+Each stat item supports:
+- `title` (`string`, required) — Card label
+- `value` (`string|int|float`, required) — Metric value
+- `change` (`int|float`, optional) — Percentage delta badge (positive green, negative red)
+- `description` (`string`, optional) — Helper subtext below the value
+- `icon` (`string`, optional) — Lucide icon name from `resources/js/components/crud/icon-map.ts` (e.g., `Package`, `Users`, `TrendingUp`, `CheckCircle`, `DollarSign`)
 
 `ResourceIndex` renders a responsive 1–4 column `<StatCard />` grid directly above the DataTable automatically.
 
@@ -126,9 +146,10 @@ When `'show'` is in `actions`, `CrudController::show()` passes `showFields` to `
 'show_fields' => [
     ['key' => 'title',      'label' => 'Title',   'type' => 'text',      'section' => 'Overview'],
     ['key' => 'sku',        'label' => 'SKU',     'type' => 'copyable',  'section' => 'Overview'],
+    ['key' => 'price',      'label' => 'Price',   'type' => 'currency',  'currency' => 'USD', 'section' => 'Overview'],
     ['key' => 'cover_path', 'label' => 'Cover',   'type' => 'image',     'section' => 'Media'],
     ['key' => 'body',       'label' => 'Content', 'type' => 'rich-text', 'section' => 'Content', 'col_span' => 2],
 ],
 ```
 
-If `show_fields` is omitted, `ResourceShow` falls back cleanly to your `columns` definitions.
+Each `show_fields` entry supports `key` (dot-notation supported), `label`, `type`, `section`, `col_span` (`1` or `2`), `currency`, `locale`, `display_format` (`fn ($record) => ...`), and `hide_on_show => true`. If `show_fields` is omitted, `ResourceShow` falls back cleanly to your `columns` (or `fields`) definitions and automatically omits `password` and `serial` fields.

@@ -17,7 +17,7 @@ The command renders a package and environment overview banner (version, PHP/Lara
 3. **Inertia page prefix** — Suggests `Dashboard/Products` and automatically detects `resources/js/pages` vs `resources/js/Pages`.
 4. **Database columns** — Inspects your schema via `Schema::getColumns()`, maps DB column types to CRUD types, and lets you pick visible index columns.
 5. **Enabled actions** — Select from `create`, `edit`, `delete`, `show`, `export`, and `import`.
-6. **Artifacts** — Choose any combination of Controller, Policy, Inertia TSX pages (`Index.tsx`, `Form.tsx`), and `config/crud.php` permission entry.
+6. **Artifacts** — Choose any combination of Controller, Policy, Inertia TSX pages (`Index.tsx`, `Form.tsx`, plus `Show.tsx` automatically when `'show'` is selected), and `config/crud.php` permission entry.
 7. **Summary & generation** — Confirms target paths in a formatted table and reports `CREATED`, `OVERWRITTEN`, `UPDATED`, or `SKIPPED` per artifact.
 
 ---
@@ -57,7 +57,7 @@ php artisan crud:generate --model=Product --policy --force
 | `--controller-namespace` | Target controller namespace override |
 | `--actions` | Comma-separated actions (`create,edit,delete,show,export,import`) |
 | `--policy` | Generate a `BaseCrudPolicy` subclass |
-| `--pages` | Generate normalized `Index.tsx` and `Form.tsx` |
+| `--pages` | Generate normalized `Index.tsx`, `Form.tsx`, and `Show.tsx` (when `'show'` is in actions) |
 | `--permissions` | Add resource entry to `config/crud.php` |
 | `--all` | Generate controller, policy, pages, and config entry |
 | `--force` | Overwrite existing files |
@@ -77,4 +77,9 @@ The generator automatically checks `stubs/crud/` before falling back to package 
 - `stubs/crud/CrudPolicy.stub`
 - `stubs/crud/IndexPage.stub`
 - `stubs/crud/FormPage.stub`
+- `stubs/crud/ShowPage.stub`
+
+::: tip Verify After Scaffolding
+Run `php artisan crud:doctor` after registering your route to verify policy registration, `config/crud.php` resource keys, routes, storage disks, and queue settings.
+:::
 

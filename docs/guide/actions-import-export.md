@@ -12,7 +12,7 @@ Control standard actions, CSV export, sync/queued background CSV imports, SoftDe
 | --- | --- | --- | --- |
 | `create` | PageHeader (`Add {Resource}`) | `create` | Navigates to `/create` (or opens modal/drawer when `form_mode` is `modal`/`drawer`) |
 | `export` | PageHeader (`Export`) | `export` | Streams filtered CSV (`GET /{uri}/export`); returns `403` when omitted |
-| `import` | PageHeader (`Import`) | `import` | Opens `FileImport` dialog posting to `POST /{uri}/import` |
+| `import` | PageHeader (`Import`) | `import` | Opens `FileImport` dialog posting to `POST /{uri}/import`; both `POST /{uri}/import` and `GET /{uri}/import-sample` return `403` when omitted |
 | `show` | Row action (`Eye`) | `view` | Opens `ResourceShow` (`GET /{uri}/{id}`) |
 | `edit` | Row action (`Pencil`) | `update` | Opens edit form + enables inline `status` & `toggle` columns |
 | `delete` | Row action & `BulkActions` | `delete` | Single delete, `bulkDestroy`, plus `restore` / `forceDestroy` on `SoftDeletes` models |
@@ -54,6 +54,29 @@ Control standard actions, CSV export, sync/queued background CSV imports, SoftDe
 4. **O(1) Memory Streaming & Real-Time Polling**: Streams CSV rows via `fgetcsv`, validates each row, flushes batches of `chunk_size` rows, updates Cache-backed progress (`GET /crud/imports/{importId}/status`), and streams invalid rows into a downloadable failed-rows CSV (`GET /crud/imports/{importId}/errors`).
 5. **Live UI Banner & Auto-Reload**: `ResourceIndex` polls progress every 2 seconds (even if the user closes the dialog!), offers a **Download Error CSV** button when any rows fail, and reloads table data & stats automatically upon completion.
 6. **Auto-Generated Sample CSV**: `GET {uri}/import-sample` streams a UTF-8 BOM template built from `import.columns` and `import.sample_rows` — automatically linked as **Download Sample Format** inside the Import modal.
+
+### `import` Configuration Reference
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `mode` | `'sync'\|'queued'\|'auto'` | `config('crud.import.mode')` | Execution mode (`'auto'` queues files larger than `queue_threshold_kb`) |
+| `queue_threshold_kb` | `int` | `1024` | Size threshold in KB for `'auto'` mode |
+| `chunked_upload` | `bool` | `false` | Uses `ChunkedFileInput` (`/crud/chunk-upload`) inside the Import dialog for large CSVs |
+| `chunk_size` | `int` | `500` | Rows per DB batch (`insert` / `upsert` / `insert_or_ignore`) |
+| `delimiter` | `string` | `','` | CSV delimiter character |
+| `strategy` | `string` | `'insert'` | `'insert'`, `'insert_or_ignore'`, `'upsert'`, or `'model'` (fires Eloquent events/mutators) |
+| `unique_by` | `string[]` | `[]` | Unique column(s) required when `strategy => 'upsert'` |
+| `update_columns` | `string[]\|null` | `null` | Columns to update on upsert conflict (defaults to all non-unique columns except `created_at`) |
+| `columns` | `array` | Auto-mapped from `fields` | `'CSV Header' => 'attr'` shorthand or `'CSV Header' => ['attribute', 'rules', 'cast', 'default']`. Supported `cast` values: `int`/`integer`, `float`/`double`/`decimal`, `bool`/`boolean`, `json`/`array` |
+| `transform` | `Closure` | `null` | `fn (array $mapped, array $rawRow, array $headers): array` — runs before row validation |
+| `sample_rows` | `array[]` | `[]` | Example rows included in `GET {uri}/import-sample` |
+| `accept` / `max_size_mb` | `string` / `int` | `'.csv,.txt'` / `100` | Accepted file types & upload size limit (also configurable top-level as `import_accept` / `import_max_size_mb`) |
+| `disk` / `temp_directory` | `string` | `config('crud.import.*')` | Per-resource storage override for temporary CSVs & error reports |
+| `connection` / `queue` | `string\|null` | `config('crud.import.*')` | Per-resource queue connection & queue name override |
+
+::: tip Enable Live Background Polling Banner
+Ensure your `HandleInertiaRequests` middleware shares `'flash' => ['data' => fn () => $request->session()->get('data'), ...]` so `ResourceIndex` automatically detects newly queued imports and polls `GET /crud/imports/{importId}/status`.
+:::
 
 ### Import Lifecycle Events
 
@@ -127,3 +150,18 @@ Define custom actions in `resourceConfig()['custom_actions']` without writing ex
 ```
 
 `Route::crudResource()` automatically registers `POST {uri}/action/{action}` → `CrudController::handleAction()`. You can also point an action at an external/custom route via `'url' => '/dashboard/recordings/{id}/send-sms'`.
+
+### `custom_actions` Options
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `key` | `string` | **Required** | Unique action identifier used in `/action/{key}` |
+| `label` | `string` | **Required** | Button label / tooltip |
+| `scope` | `'row'\|'bulk'` | `'row'` | Renders per row in `DataTable` or in `BulkActions` bar when rows are selected |
+| `icon` | `string\|null` | `null` | Lucide icon name from `icon-map.ts` (e.g. `Send`, `Star`, `CheckCircle`) |
+| `variant` | `string` | `'ghost'` | `'default'`, `'outline'`, `'secondary'`, `'ghost'`, or `'destructive'` |
+| `method` | `string` | `'post'` | HTTP method (`post`, `put`, `patch`, `delete`, `get`) |
+| `url` | `string` | `"{baseRoute}/action/{key}"` | Optional custom endpoint override (supports `{id}` interpolation for row actions) |
+| `permission` | `string\|null` | `null` | Policy ability checked before rendering and before executing `handler` |
+| `confirm` | `array\|null` | `null` | Optional `ConfirmDialog` config (`title`, `description`, `confirmLabel`) |
+| `handler` | `Closure` | — | `fn ($record, Request $request)` (row) or `fn (Collection $records, Request $request)` (bulk); return a response or `null` for default `back()->with('success', ...)` |

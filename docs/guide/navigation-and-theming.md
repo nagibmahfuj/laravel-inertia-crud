@@ -4,7 +4,7 @@ Wire permission-aware sidebar navigation, Inertia layouts, flash toasts, and run
 
 ## Normalized `AppLayout` & Flash Toasts
 
-In v2.0, neither `ResourceIndex` nor `ResourceForm` wraps `<AppLayout>` internally. Configure your `AppLayout` to read normalized `meta.breadcrumbs` as a fallback and display session flash messages:
+In v2.0, none of `ResourceIndex`, `ResourceForm`, or `ResourceShow` wraps `<AppLayout>` internally. Configure your `AppLayout` to read normalized `meta.breadcrumbs` as a fallback and display session flash messages:
 
 ```tsx
 // resources/js/layouts/app-layout.tsx
@@ -41,7 +41,7 @@ export default function AppLayout({
 }
 ```
 
-Share `flash` in `app/Http/Middleware/HandleInertiaRequests.php`:
+Share `flash` (including `flash.data`, which powers the live background CSV import progress banner in `ResourceIndex`) in `app/Http/Middleware/HandleInertiaRequests.php`:
 
 ```php
 public function share(Request $request): array
@@ -178,4 +178,10 @@ export function AppSidebar() {
     );
 }
 ```
+
+---
+
+## Built-In Icon Map (`icon-map.ts`)
+
+KPI `stats` cards and declarative `custom_actions` accept string Lucide icon names (e.g. `'Package'`, `'Users'`, `'TrendingUp'`, `'CheckCircle'`, `'Send'`, `'Star'`, `'DollarSign'`, `'Trash2'`). These resolve via `resolveLucideIcon()` in your published `resources/js/components/crud/icon-map.ts`, which ships with 65+ common dashboard icons and can be extended freely with any icon from `lucide-react`.
 

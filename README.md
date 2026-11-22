@@ -57,38 +57,37 @@ Your Laravel app must have the following installed (standard in Laravel React/Ty
 composer require nagibmahfuj/laravel-inertia-crud:^2.0
 ```
 
-The service provider and native chunk upload endpoints are auto-discovered.
+The service provider automatically registers `Route::crudResource()`, native chunk upload (`/crud/chunk-upload`), async options (`/crud/options`), background import (`/crud/imports/{id}/status|errors`) routes, and Artisan commands (`crud:install`, `crud:generate`, `crud:doctor`, `crud:cleanup-chunks`).
 
-### 2. Publish the config
+### 2. Run the guided installer
+
+```bash
+php artisan crud:install
+# Optionally also publish stubs & portable AI Agent Skill:
+php artisan crud:install --stubs --ai
+```
+
+`crud:install` publishes `config/crud.php`, all React/TypeScript components (`resources/js/components/crud/`), theme (`resources/js/lib/crud-theme.ts`), and navigation hook (`resources/js/hooks/use-nav-items.ts`), and audits `package.json` + `resources/js/components/ui/` for missing npm or shadcn/ui prerequisites.
+
+Or publish assets selectively:
 
 ```bash
 php artisan vendor:publish --tag=crud-config
-```
-
-This creates `config/crud.php` where you configure permissions, default URL prefix, root breadcrumb, pagination limits, chunked uploads, and generator defaults.
-
-### 3. Publish frontend assets
-
-```bash
 php artisan vendor:publish --tag=crud-assets
+php artisan vendor:publish --tag=crud-stubs
+php artisan vendor:publish --tag=crud-ai
 ```
 
-This publishes:
+Run `php artisan crud:doctor` anytime to audit your package setup, queue connection, storage disks, and every `CrudController` in your app.
 
-- `resources/js/components/crud/` — All React components (`ResourceIndex`, `ResourceForm`, `FormField`, `ChunkedFileInput`, `FilterBar`, `DataTable`, `FileImport`, `ExportButton`, `types.ts`, etc.)
-- `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
-- `resources/js/hooks/use-nav-items.ts` — Dynamic permission-aware navigation hook
-
-You can also publish selectively with `--tag=crud-components`, `--tag=crud-lib`, or `--tag=crud-stubs`.
-
-### 4. Install npm dependencies (if not already installed)
+### 3. Install npm dependencies (if reported missing by `crud:install`)
 
 ```bash
 npm install date-fns lodash react-day-picker
 npm install -D @types/lodash
 ```
 
-### 5. Install required shadcn/ui components (if not already installed)
+### 4. Install required shadcn/ui components (if reported missing by `crud:install`)
 
 ```bash
 npx shadcn@latest add button input label select table badge checkbox dialog calendar popover card progress separator dropdown-menu textarea command
@@ -309,11 +308,17 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 `Route::crudResource()` automatically registers:
 
 - Standard `Route::resource()` routes (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`)
-- `GET {uri}/export` → `ProductController@export` (`{name}.export`, if method exists)
-- `POST {uri}/import` → `ProductController@import` (`{name}.import`, if method exists)
-- `POST {uri}/bulk-destroy` → `ProductController@bulkDestroy` (`{name}.bulk-destroy`, if method exists)
+- `GET {uri}/export` → `ProductController@export` (`{name}.export`)
+- `POST {uri}/import` → `ProductController@import` (`{name}.import`)
+- `GET {uri}/import-sample` → `ProductController@importSample` (`{name}.import-sample`)
+- `POST {uri}/bulk-destroy` → `ProductController@bulkDestroy` (`{name}.bulk-destroy`)
+- `POST {uri}/bulk-restore` → `ProductController@bulkRestore` (`{name}.bulk-restore`)
+- `POST {uri}/bulk-force-destroy` → `ProductController@bulkForceDestroy` (`{name}.bulk-force-destroy`)
+- `POST {uri}/action/{action}` → `ProductController@handleAction` (`{name}.action`)
+- `POST {uri}/{id}/restore` → `ProductController@restore` (`{name}.restore`)
+- `DELETE {uri}/{id}/force` → `ProductController@forceDestroy` (`{name}.force-destroy`)
 
-> You do **not** need to register any route for chunked uploads — `CrudServiceProvider` registers `POST /crud/chunk-upload` and `DELETE /crud/chunk-upload/{uploadId}` natively.
+> `CrudServiceProvider` also natively registers `POST /crud/chunk-upload`, `DELETE /crud/chunk-upload/{uploadId}`, `GET /crud/options`, `GET /crud/imports/{importId}/status`, and `GET /crud/imports/{importId}/errors` — zero manual routes required.
 
 ### Step 6: Create Normalized Inertia Pages
 
@@ -355,7 +360,25 @@ Form.layout = (page: any) => (
 );
 ```
 
-Any prop (`title`, `description`, `baseRoute`, `exportRoute`, `importRoute`, `submitRoute`, `indexRoute`, `cellOverrides`, `rowActions`, `headerActions`) can still be passed on `<ResourceIndex />` or `<ResourceForm />` to override the `meta` default for a specific page.
+**`resources/js/pages/Dashboard/Products/Show.tsx`** *(auto-generated when `'show'` is in `actions`)*
+
+```tsx
+import ResourceShow from '@/components/crud/ResourceShow';
+import type { ResourceShowProps } from '@/components/crud/types';
+import AppLayout from '@/layouts/app-layout';
+
+export default function Show(props: ResourceShowProps) {
+    return <ResourceShow {...props} />;
+}
+
+Show.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);
+```
+
+Any prop (`title`, `description`, `baseRoute`, `exportRoute`, `importRoute`, `submitRoute`, `indexRoute`, `cellOverrides`, `fieldOverrides`, `rowActions`, `headerActions`) can still be passed on `<ResourceIndex />`, `<ResourceForm />`, or `<ResourceShow />` to override the `meta` default for a specific page.
 
 ---
 
@@ -377,21 +400,29 @@ Any prop (`title`, `description`, `baseRoute`, `exportRoute`, `importRoute`, `su
 | `base_route`         | `string\|null` | Override index base URL (auto-resolved via `route("{$route_prefix}.index", [], false)`)   |
 | `url_prefix`         | `string\|null` | Fallback URL prefix when named route isn't registered (defaults to `config('crud.url_prefix')`) |
 | `page_prefix`        | `string`       | Inertia page directory prefix (e.g. `'Dashboard/Products'`)                               |
+| `form_mode`          | `string`       | Create/Edit UX: `'page'` (default), `'modal'`, or `'drawer'`                              |
+| `form_columns`       | `1\|2`         | Responsive form grid column count (default `1`)                                           |
+| `form_sections`      | `array`        | Optional section card metadata (`title`, `description`, `columns`)                        |
+| `soft_deletes`       | `bool`         | Auto-detected from `SoftDeletes` trait; enables trashed filter, restore & force-delete    |
 | `per_page`           | `int`          | Default rows per page (default `10`, clamped by `config('crud.max_per_page')`)            |
 | `searchable`         | `string[]`     | Columns / dot-notated relations to search (e.g. `['name', 'category.name']`)              |
 | `default_sort`       | `string`       | Default sort column (falls back to `created_at` or primary key for non-timestamped models)|
 | `default_direction`  | `string`       | `'asc'` or `'desc'` (default `'desc'`)                                                    |
 | `with`               | `string[]`     | Eloquent eager-loaded relations                                                           |
 | `with_count`         | `string[]`     | Eloquent `withCount` relations                                                            |
+| `stats`              | `array\|Closure`| KPI `StatCard` array or `fn ($baseQuery) => [...]` rendered above the index table        |
 | `actions`            | `string[]`     | Enabled actions: `'create'`, `'edit'`, `'delete'`, `'show'`, `'export'`, `'import'`       |
-| `row_selection`      | `bool`         | Enable multi-row selection checkboxes and `BulkActions` bar (with `bulkDestroy`)          |
+| `custom_actions`     | `array[]`      | Declarative row and bulk actions (`POST {uri}/action/{key}`) with policy & confirm dialog |
+| `row_selection`      | `bool`         | Enable multi-row selection checkboxes and `BulkActions` bar                               |
+| `import`             | `array`        | Built-in sync/queued CSV import configuration (`mode`, `strategy`, `columns`, etc.)       |
 | `export_route`       | `string\|null` | Override export URL (auto-resolved when `'export'` is in `actions`)                       |
 | `import_route`       | `string\|null` | Override import URL (auto-resolved when `'import'` is in `actions`)                       |
-| `import_format_url`  | `string\|null` | Optional sample template URL shown in the Import dialog                                   |
-| `import_accept`      | `string`       | Accepted file types in Import modal (default `'.csv,.xlsx,.xls'`)                         |
+| `import_format_url`  | `string\|null` | Optional sample template URL (defaults to `GET {uri}/import-sample`)                      |
+| `import_accept`      | `string`       | Accepted file types in Import modal (default `'.csv,.txt'`)                               |
 | `import_max_size_mb` | `int`          | Max file size in MB for Import modal (default `100`)                                      |
 | `breadcrumbs`        | `array\|null`  | Custom base breadcrumbs (`[['title' => '...', 'href' => '...']]`); Create/Edit/Details auto-appended |
 | `columns`            | `array[]`      | Index table & CSV export column definitions                                               |
+| `show_fields`        | `array[]`      | Optional detail-page field layout for `ResourceShow` (falls back to `columns` / `fields`) |
 | `filters`            | `array[]`      | Index `FilterBar` filter definitions                                                      |
 | `fields`             | `array[]`      | Create/Edit `ResourceForm` field definitions                                              |
 
@@ -543,6 +574,10 @@ Each column in the `columns` array supports:
 | `sortable`       | `bool`     | Whether the column is sortable                                                                    |
 | `type`           | `string`   | Display type: `text`, `number`, `badge`, `status`, `boolean`, `toggle`, `date`, `datetime`, `image`, `serial`, `copyable`, `currency`, `link`, `tags`, `truncate` |
 | `className`      | `string`   | Optional Tailwind classes applied to `<th>` and `<td>`                                            |
+| `default_hidden` | `bool`     | Hide column by default until toggled on via the `DataTable` Columns menu (`localStorage`)         |
+| `hideable`       | `bool`     | Set `false` to prevent hiding this column (default `true`)                                        |
+| `currency`/`locale` | `string`| Currency formatting options for `type => 'currency'` (e.g., `'USD'`, `'en-US'`)                   |
+| `max_length`     | `int`      | Truncation length for `type => 'truncate'` (default `40`)                                         |
 | `export_format`  | `callable` | Custom CSV export formatter: `fn($record) => $record->name`                                       |
 | `display_format` | `callable` | Custom display formatter applied server-side before sending to frontend                           |
 
@@ -561,9 +596,14 @@ Each field in the `fields` array supports:
 | `rules_update`       | `string\|array` | Override validation rules on update                                    |
 | `required`           | `bool`          | Show required indicator in UI                                          |
 | `optional_on_update` | `bool`          | Replace `required` with `sometimes` on update                          |
-| `options`            | `array`         | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]`      |
+| `options`            | `array\|Closure`| Static array (`[['label' => 'X', 'value' => 'y']]` or `['y' => 'X']`) or lazy `Closure` |
+| `relationship`       | `array`         | Declarative model options (`model`, `value`, `label`, `search_columns`, `limit`, `query`, `async`) |
 | `multiple`           | `bool`          | Enables multi-select combobox for `select` fields                      |
-| `accept`             | `string`        | Accepted MIME types / extensions for `file` and `chunked-file` fields  |
+| `slug_from`          | `string`        | Auto-slugify source field key for `slug` fields                        |
+| `help`               | `string`        | Helper text displayed beneath the input                                |
+| `section` / `col_span`| `string`/`1\|2`| Group into `form_sections` cards & span 1 or 2 grid columns            |
+| `visible_when`       | `array`         | Conditional display rule (`field` + `equals`, `not_equals`, `in`, `not_in`, `truthy`, `falsy`, `empty`, `not_empty`) |
+| `accept`, `disk`, `directory`, `path_column`, `delete_old` | various | Auto-handled storage & preview options for `file`, `image`, and `chunked-file` fields |
 | `default`            | `mixed`         | Default value on create                                                |
 | `disabled`           | `bool`          | Render input disabled                                                  |
 | `hide_on_create`     | `bool`          | Hide this field on the create form                                     |
@@ -588,7 +628,8 @@ Each filter in the `filters` array supports:
 | `label`       | `string` | Filter label                                                  |
 | `type`        | `string` | `select`, `boolean`, `text`, `date`, `date_range`             |
 | `column`      | `string` | Database column (defaults to `key`)                           |
-| `options`     | `array`  | Options for `select` filters                                  |
+| `options`     | `array\|Closure` | Static or lazy Closure options for `select` filters           |
+| `relationship`| `array`          | Declarative Eloquent options (`model`, `value`, `label`, `search_columns`, `limit`, `query`, `async`) |
 | `multiple`    | `bool`   | Enable multi-select faceted filter for `select` filters       |
 | `relation`    | `string` | Filter via a relationship (`whereHas`)                        |
 | `separator`   | `string` | Custom separator for multi-select URL values                  |
@@ -611,33 +652,44 @@ Include `'export'` in `actions`:
 - When `'export'` is present and the user passes `Policy::export()`, `ResourceIndex` renders the Export button using the auto-resolved `{route_prefix}.export` route.
 - When `'export'` is omitted from `actions`, the Export button is hidden **and** `GET /{resource}/export` returns `403 Forbidden`.
 
-### Import
+### Import (Built-In Sync & Background Queued CSV Engine)
 
-1. Add an `import(Request $request)` method to your controller:
-
-```php
-public function import(Request $request)
-{
-    $this->authorize('import', \App\Models\Product::class);
-
-    $request->validate(['file' => 'required|file|mimes:csv,xlsx|max:102400']);
-
-    // Your import logic here
-
-    return back()->with('success', 'Import started successfully.');
-}
-```
-
-2. Include `'import'` in `actions` (and optionally set `import_format_url`, `import_accept`, `import_max_size_mb`, or custom `import_route`):
+Include `'import'` in `actions` and configure `'import'` in `resourceConfig()` — no custom `import()` controller method required:
 
 ```php
-'actions'            => ['create', 'edit', 'delete', 'export', 'import'],
-'import_format_url'  => '/samples/products.csv',
-'import_accept'      => '.csv,.xlsx',
-'import_max_size_mb' => 50,
+'actions' => ['create', 'edit', 'delete', 'export', 'import'],
+'import'  => [
+    'mode'               => 'auto',      // 'sync' | 'queued' | 'auto'
+    'queue_threshold_kb' => 1024,        // Auto-queue files > 1 MB
+    'chunked_upload'     => true,        // Uses ChunkedFileInput (/crud/chunk-upload) for huge CSVs
+    'chunk_size'         => 500,         // DB insert/upsert batch size
+    'strategy'           => 'upsert',    // 'insert' | 'insert_or_ignore' | 'upsert' | 'model'
+    'unique_by'          => ['sku'],
+    'columns'            => [
+        'Name'  => ['attribute' => 'name',  'rules' => 'required|string|max:255'],
+        'SKU'   => ['attribute' => 'sku',   'rules' => 'required|string|max:100'],
+        'Price' => ['attribute' => 'price', 'rules' => 'nullable|numeric|min:0', 'cast' => 'float', 'default' => 0],
+    ],
+    'transform'   => fn (array $row) => [...$row, 'sku' => strtoupper((string) $row['sku'])],
+    'sample_rows' => [['Classic Cola 500ml', 'COKE-500', '1.99']],
+],
 ```
 
-`Route::crudResource()` automatically registers `POST {uri}/import`, `CrudService::buildMeta()` resolves `meta.routes.import` (respecting `Policy::import()`), and `ResourceIndex` automatically shows the Import button and upload dialog.
+- `Route::crudResource()` automatically registers `POST {uri}/import` and `GET {uri}/import-sample` (streaming a downloadable template CSV). Both return `403` when `'import'` is omitted from `actions`.
+- Files larger than `queue_threshold_kb` automatically dispatch `ProcessCrudImportJob`, update Cache-backed progress polled by `ResourceIndex` (`GET /crud/imports/{id}/status`), generate a downloadable failed-rows CSV (`GET /crud/imports/{id}/errors`), and dispatch `CrudImportCompleted` / `CrudImportFailed` events.
+- Need a custom Excel or domain-specific importer? You can still override `public function import(Request $request)` on any controller.
+
+---
+
+## ✨ KPI Stats, Soft Deletes, Custom Actions & Modal Forms
+
+- **KPI Stats (`stats`):** Add `'stats' => fn ($query) => [['title' => 'Total', 'value' => (clone $query)->count(), 'icon' => 'Package']]` (or override `protected function stats($baseQuery): array`) to render responsive `<StatCard />` metrics above the index table.
+- **Soft Deletes:** Models using `Illuminate\Database\Eloquent\SoftDeletes` automatically gain the trashed filter (`?trashed=with|only`), row/bulk **Restore** & **Delete Permanently** actions, and `BaseCrudPolicy::restore()` / `forceDelete()`.
+- **Declarative Custom Actions (`custom_actions`):** Define `'scope' => 'row' | 'bulk'` actions with `'permission'`, `'confirm'`, `'icon'`, and `'handler' => fn ($recordOrCollection, Request $request) => ...` handled automatically via `POST {uri}/action/{action}`.
+- **Modal / Drawer Forms (`form_mode`):** Set `'form_mode' => 'modal'` or `'drawer'` to open create/edit forms directly inside `ResourceIndex` via `X-Crud-Form: 1` without leaving the table.
+- **Auto-Handled `file` & `image` Fields & Async Selects:** Configure `disk`/`directory`/`path_column`/`delete_old` directly on `file`/`image` fields, and use `'options' => fn () => ...` or `'relationship' => ['model' => ..., 'async' => true]` (`GET /crud/options`) for fast searchable selects.
+
+See the [full v2 documentation](https://nagibmahfuj.github.io/laravel-inertia-crud/) for detailed guides and code examples for every feature.
 
 ---
 
@@ -683,6 +735,33 @@ return [
         'max_retries'        => 3,
         'ttl_hours'          => 6,
         'allowed_extensions' => [],
+    ],
+
+    'options' => [
+        'enabled'    => true,
+        'route'      => '/crud/options',
+        'route_name' => 'crud.options',
+        'middleware' => ['web', 'auth'],
+        'limit'      => 25,
+        'ttl_hours'  => 6,
+    ],
+
+    'import' => [
+        'enabled'            => true,
+        'route'              => '/crud/imports',
+        'route_name'         => 'crud.import',
+        'middleware'         => ['web', 'auth'],
+        'mode'               => 'auto',      // 'sync' | 'queued' | 'auto'
+        'queue_threshold_kb' => 1024,
+        'queue'              => null,
+        'connection'         => null,
+        'chunk_size'         => 500,
+        'disk'               => 'local',
+        'temp_directory'     => 'crud-imports',
+        'status_ttl_hours'   => 24,
+        'max_errors_sample'  => 50,
+        'tries'              => 3,
+        'timeout'            => 600,
     ],
 
     'generator' => [
@@ -746,7 +825,7 @@ Register in `config/crud.php`:
 
 ### 1. Normalized `AppLayout`
 
-`ResourceIndex` and `ResourceForm` never wrap `<AppLayout>` internally, preventing layout duplication in Inertia v2/v3. Wire your `AppLayout` to read normalized `meta.breadcrumbs` as a fallback and display session flash toasts:
+`ResourceIndex`, `ResourceForm`, and `ResourceShow` never wrap `<AppLayout>` internally, preventing layout duplication in Inertia v2/v3. Wire your `AppLayout` to read normalized `meta.breadcrumbs` as a fallback and display session flash toasts:
 
 ```tsx
 import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';

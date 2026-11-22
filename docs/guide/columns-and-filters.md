@@ -20,7 +20,23 @@ Configure table presentation, column visibility, CSV export formatting, relation
 ],
 ```
 
-### Supported Column Types
+### Column Options Reference
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `key` | `string` | Model attribute or dot-notated relationship path (e.g. `category.name`) |
+| `label` | `string` | Column header text & CSV export header |
+| `sortable` | `bool` | Whitelists this column for `?sort=` ordering |
+| `type` | `string` | Display renderer (see the 15 types below) |
+| `className` | `string` | Optional Tailwind classes applied to `<th>` and `<td>` |
+| `default_hidden` | `bool` | Hide column by default until toggled on in the **Columns** menu |
+| `hideable` | `bool` | Set `false` to prevent hiding this column (default `true`) |
+| `currency` / `locale` | `string` | Formatting options for `type => 'currency'` (e.g. `'USD'`, `'en-US'`) |
+| `max_length` | `int` | Character limit for `type => 'truncate'` (default `40`) |
+| `display_format` | `Closure` | Server-side formatter `fn ($record) => ...` applied before rendering (stripped from Inertia meta) |
+| `export_format` | `Closure` | Custom CSV export formatter `fn ($record) => ...` (stripped from Inertia meta) |
+
+### Supported Column Types (15)
 
 | Type | Rendered UI | Extra Options |
 | --- | --- | --- |
@@ -89,9 +105,10 @@ Define `'options'` as a `Closure` so dropdown queries execute **only** on `index
 | `column` | `string` | Database column (defaults to `key`) |
 | `relation` | `string` | Filter via relationship (`whereHas`) — works on all filter types |
 | `options` | `array\|Closure` | Static array (`[['label' => ..., 'value' => ...]]` or `['val' => 'Label']`) or lazy `Closure` |
-| `relationship` | `array` | Declarative model options (`model`, `value`, `label`, `limit`) |
+| `relationship` | `array` | Declarative model options (`model`, `value`, `label`, `search_columns`, `order_by`, `order_dir`, `limit`, `query` Closure, `async`, `endpoint`) |
 | `multiple` | `bool` | Searchable `DataTableFacetedFilter` multi-select |
 | `separator` | `string` | Multi-select URL delimiter (defaults to `config('crud.default_separator')`) |
+| `placeholder` | `string` | Optional input placeholder for `text` filters |
 
 ### SoftDeletes Trashed Filter
 

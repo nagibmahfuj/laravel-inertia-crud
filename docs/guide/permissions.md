@@ -1,6 +1,6 @@
 # Permissions & Roles
 
-`BaseCrudPolicy` maps a clean config matrix in `config/crud.php` to standard Laravel Gate abilities (`viewAny`, `view`, `create`, `update`, `delete`, `export`, `import`).
+`BaseCrudPolicy` maps a clean config matrix in `config/crud.php` to standard Laravel Gate abilities (`viewAny`, `view`, `create`, `update`, `delete`, `restore`, `forceDelete`, `export`, `import`).
 
 ## Creating a Resource Policy
 
@@ -43,7 +43,7 @@ class ProductPolicy extends BaseCrudPolicy
 | `viewAny`, `view`, `export` | User role is listed in `resources.{key}.roles` |
 | `create` | Has access **and** not in `read_only` / `read_only_roles` (resource or global) |
 | `update`, `import` | Has create access **and** not in `create_only` / `create_only_roles` |
-| `delete` | Has write access **and** not blocked by resource `no_delete` / `no_delete_roles` or global `no_delete_roles` |
+| `delete`, `restore`, `forceDelete` | Has write access **and** not blocked by resource `no_delete` / `no_delete_roles` or global `no_delete_roles` |
 
 ::: tip Boolean Flags at Resource Level
 You can pass `'no_delete' => true`, `'read_only' => true`, or `'create_only' => true` on an individual resource to apply that restriction to **all** roles (even `super_admin`) unless overridden in a custom policy method.

@@ -97,8 +97,65 @@ Standard `file` and `image` fields support the same zero-boilerplate storage opt
 ```
 
 - On create/update, `FileUploadService` stores the file, deletes replaced files, and populates `path_column` (plus optional `name_column` & `size_column`).
+- Supports the same storage options as `chunked-file`: `disk`, `directory` (`string|Closure`), `filename` (`Closure`), `preserve_filename`, `visibility`, `path_column`, `name_column`, `size_column`, `url_column`, `delete_old`, and `auto_handle`.
 - On edit, `FormField` shows the existing image thumbnail (or file download card) with **Replace** and **Remove** (`{ removed: true }`).
 - Legacy controllers using `'ignore_on_save' => true` (or `'auto_handle' => false`) keep full manual control in `beforeSave()`.
+
+---
+
+## Repeater & Options-Builder Fields
+
+::: code-group
+
+```php [Repeater (Nested Sub-Forms)]
+[
+    'key'                => 'variants',
+    'label'              => 'Product Variants',
+    'type'               => 'repeater',
+    'rules'              => 'nullable|array',
+    'hide_add_button'    => false,
+    'hide_remove_button' => false,
+    'fields'             => [
+        ['key' => 'sku',   'label' => 'SKU',   'type' => 'text',   'rules' => 'required|string'],
+        ['key' => 'price', 'label' => 'Price', 'type' => 'number', 'rules' => 'required|numeric|min:0'],
+    ],
+]
+```
+
+```php [Options-Builder (Quizzes & Polls)]
+[
+    'key'   => 'choices',
+    'label' => 'Answer Options',
+    'type'  => 'options-builder',
+    'rules' => 'required|array|min:2',
+]
+```
+
+:::
+
+Repeater fields are validated recursively (`variants.*.sku`, `variants.*.price`) and skipped in `fillModel()` so you can sync them cleanly inside `afterSave()`.
+
+---
+
+## Field Options Reference
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `key` / `label` / `type` | `string` | Attribute name, display label, and field renderer type |
+| `rules` / `rules_update` | `string\|array` | Laravel validation rules (supports `Rule` objects and `{id}` unique exclusion) |
+| `required` / `optional_on_update` | `bool` | Marks field required in UI; `optional_on_update` converts `required` → `sometimes` on edit |
+| `placeholder` / `help` | `string` | Input placeholder and helper text shown below the input |
+| `section` / `col_span` | `string` / `1\|2` | Groups field into a `form_sections` card and spans 1 or 2 grid columns |
+| `visible_when` | `array` | Conditional display rule (`field` + operator: `equals`, `not_equals`, `in`, `not_in`, `truthy`, `falsy`, `empty`, `not_empty`) |
+| `options` | `array\|Closure` | Static or lazy Closure options for `select` and `radio` (`[['label' => ..., 'value' => ...]]` or `['val' => 'Label']`) |
+| `relationship` | `array` | Declarative Eloquent options (`model`, `value`, `label`, `search_columns`, `order_by`, `order_dir`, `limit`, `query` Closure, `async`, `endpoint`) |
+| `multiple` | `bool` | Multi-select combobox for `select` fields |
+| `slug_from` | `string` | Source field key auto-slugified into a `slug` input |
+| `default` / `disabled` | `mixed` / `bool` | Initial create value and disabled input flag |
+| `hide_on_create` / `hide_on_edit` / `hidden` | `bool` | Visibility control by form mode |
+| `ignore_on_save` | `bool` | Skip assigning this key in `CrudService::fillModel()` |
+| `accept`, `disk`, `directory`, `filename`, `preserve_filename`, `visibility`, `delete_old`, `path_column`, `name_column`, `size_column`, `url_column`, `auto_handle` | various | Storage and column-mapping options for `file`, `image`, and `chunked-file` fields |
+| `fields` / `hide_add_button` / `hide_remove_button` | `array` / `bool` | Nested field schema and controls for `repeater` fields |
 
 ---
 
@@ -138,3 +195,5 @@ Avoid running heavy queries on every controller request by using lazy closures o
 :::
 
 When `'async' => true`, `OptionsService` encrypts the approved model/columns into a user-scoped `options_config` token so the native `GET /crud/options` endpoint safely searches large tables with debounced queries and pre-hydrates selected labels on edit.
+
+For non-async relationships (`'async' => false`, the default), you can also pass `'query' => fn ($q) => $q->where('is_active', true)` along with `'order_by'`, `'order_dir'`, and `'limit'` to scope the eager option list.
