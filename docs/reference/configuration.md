@@ -1,5 +1,7 @@
 # Configuration (`config/crud.php`)
 
+Configure global defaults, role/resource permissions, chunked uploads, async options, CSV imports, and generator namespaces in `config/crud.php`.
+
 Publish the configuration file with:
 
 ```bash

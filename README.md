@@ -936,6 +936,25 @@ export function AppSidebar() {
 
 ---
 
+## 🤖 AI Code Editor & Laravel Boost Support
+
+This package ships first-class AI context so coding agents (Antigravity, Claude Code, Cursor, Windsurf, GitHub Copilot, Codex, Laravel Boost, and Context7) generate accurate v2 code out of the box:
+
+- **Laravel Boost (Automatic):** Includes `resources/boost/guidelines/core.blade.php` and `resources/boost/skills/laravel-inertia-crud/` — automatically discovered by `php artisan boost:install` with zero setup.
+- **Portable Agent Skill (`.agents/skills/`):**
+  ```bash
+  # Install into any AI editor via the skills CLI
+  npx skills add nagibmahfuj/laravel-inertia-crud
+
+  # Or publish locally from Composer into .agents/skills/laravel-inertia-crud/
+  php artisan crud:install --ai
+  # or: php artisan vendor:publish --tag=crud-ai
+  ```
+- **`llms.txt` & `llms-full.txt`:** Auto-generated with the VitePress docs site at [llms.txt](https://nagibmahfuj.github.io/laravel-inertia-crud/llms.txt) and [llms-full.txt](https://nagibmahfuj.github.io/laravel-inertia-crud/llms-full.txt).
+- **Context7 & `AGENTS.md`:** Ships `context7.json` and `AGENTS.md` at the repository root.
+
+---
+
 ## 🔄 Upgrading from v1.x to v2.0
 
 See the full **[UPGRADE.md](UPGRADE.md)** guide for every breaking change, before/after code diffs, and migration steps (including action-driven export/import, normalized `Index.tsx`/`Form.tsx`/`AppLayout`, and migrating manual chunk upload routes/controllers to the native `chunked-file` field).

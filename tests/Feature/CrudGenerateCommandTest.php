@@ -8,6 +8,7 @@ afterEach(function () {
     File::deleteDirectory(base_path('resources/js/pages/Admin'));
     File::deleteDirectory(base_path('resources/js/Pages/Dashboard'));
     File::deleteDirectory(resource_path('js/components/crud'));
+    File::deleteDirectory(base_path('.agents'));
     File::delete(config_path('crud.php'));
 });
 
@@ -61,4 +62,13 @@ it('runs crud:install and crud:doctor cleanly', function () {
         ->assertSuccessful()
         ->expectsOutputToContain('LARAVEL INERTIA CRUD — DOCTOR')
         ->expectsOutputToContain('All critical CRUD checks passed');
+});
+
+it('publishes portable AI agent skill when running crud:install --ai', function () {
+    $this->artisan('crud:install', ['--no-assets' => true, '--ai' => true, '--force' => true])
+        ->assertSuccessful();
+
+    expect(File::exists(base_path('.agents/skills/laravel-inertia-crud/SKILL.md')))->toBeTrue()
+        ->and(File::exists(base_path('.agents/skills/laravel-inertia-crud/references/resource-config.md')))->toBeTrue()
+        ->and(File::exists(base_path('.agents/skills/laravel-inertia-crud/references/uploads-and-imports.md')))->toBeTrue();
 });

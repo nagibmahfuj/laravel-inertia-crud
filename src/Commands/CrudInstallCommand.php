@@ -9,6 +9,7 @@ class CrudInstallCommand extends Command
 {
     protected $signature = 'crud:install
         {--stubs : Also publish customizable generator stubs}
+        {--ai : Also publish the portable AI Agent Skill to .agents/skills/}
         {--force : Overwrite existing published config/assets}
         {--no-assets : Skip publishing frontend React/TypeScript assets}';
 
@@ -71,7 +72,15 @@ class CrudInstallCommand extends Command
             ]);
         }
 
-        // 4. Inspect package.json for npm prerequisites
+        // 4. Optionally publish portable AI Agent Skill (.agents/skills/)
+        if ($this->option('ai')) {
+            $this->call('vendor:publish', [
+                '--tag'   => 'crud-ai',
+                '--force' => $force,
+            ]);
+        }
+
+        // 5. Inspect package.json for npm prerequisites
         $missingNpm = $this->findMissingNpmPackages($files);
         $missingUi  = $this->findMissingShadcnComponents($files);
 

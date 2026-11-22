@@ -4,11 +4,11 @@
 
 ### `php artisan crud:install`
 
-Guided setup command that publishes `config/crud.php`, frontend components/hooks/theme, optional stubs, and audits `package.json` + `resources/js/components/ui/` to report any missing npm packages or shadcn/ui components.
+Guided setup command that publishes `config/crud.php`, frontend components/hooks/theme, optional stubs, optional portable AI Agent Skill (`.agents/skills/`), and audits `package.json` + `resources/js/components/ui/` to report any missing npm packages or shadcn/ui components.
 
 ```bash
 php artisan crud:install
-php artisan crud:install --stubs --force
+php artisan crud:install --stubs --ai --force
 ```
 
 ---
@@ -68,3 +68,25 @@ php artisan vendor:publish --tag=<tag>
 | `crud-lib` | `resources/js/lib/crud-theme.ts` and `resources/js/hooks/use-nav-items.ts` |
 | `crud-assets` | All frontend assets (`crud-components` + `crud-lib`) |
 | `crud-stubs` | `stubs/crud/` |
+| `crud-ai` | `.agents/skills/laravel-inertia-crud/` (portable AI Agent Skill + reference docs) |
+
+---
+
+## AI Code Editor & Laravel Boost Support
+
+`nagibmahfuj/laravel-inertia-crud` ships native context for AI coding editors and agents (Antigravity, Claude Code, Cursor, Windsurf, GitHub Copilot, Codex, Laravel Boost, and Context7):
+
+- **Laravel Boost (zero config):** Automatically discovers `resources/boost/guidelines/core.blade.php` and `resources/boost/skills/laravel-inertia-crud/` whenever you run `php artisan boost:install`.
+- **Portable Agent Skill (any AI editor):**
+  ```bash
+  # Install via skills CLI (from GitHub)
+  npx skills add nagibmahfuj/laravel-inertia-crud
+
+  # Or publish directly from your installed Composer package into .agents/skills/
+  php artisan crud:install --ai
+  # or: php artisan vendor:publish --tag=crud-ai
+  ```
+- **`llms.txt` & `llms-full.txt`:** Generated automatically on every documentation build and published alongside the docs site:
+  - Index: `https://nagibmahfuj.github.io/laravel-inertia-crud/llms.txt`
+  - Single-file full docs: `https://nagibmahfuj.github.io/laravel-inertia-crud/llms-full.txt`
+- **Context7 & `AGENTS.md`:** Includes `context7.json` and `AGENTS.md` at the repository root for automated doc indexing and repo conventions.

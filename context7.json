@@ -1,0 +1,27 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Laravel Inertia CRUD (v2)",
+  "description": "Config-driven CRUD scaffolding for Laravel + Inertia.js (React/TypeScript) with normalized Index/Form/Show pages, native chunked uploads, sync & queued background CSV imports, SoftDeletes, declarative custom actions, and role-based permissions.",
+  "folders": [
+    "docs"
+  ],
+  "excludeFolders": [
+    "docs/node_modules",
+    "docs/.vitepress",
+    "tests",
+    "vendor",
+    ".github"
+  ],
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "rules": [
+    "Always use v2 normalized pages: <ResourceIndex {...props} />, <ResourceForm {...props} />, and <ResourceShow {...props} /> with AppLayout breadcrumbs bound to page.props?.meta?.breadcrumbs ?? [].",
+    "Control Export and Import visibility via 'export' and 'import' inside resourceConfig()['actions'], not via hardcoded exportRoute/importRoute props.",
+    "Use int|string $id when overriding show(), edit(), update(), destroy(), restore(), or forceDestroy() on CrudController subclasses.",
+    "Use the native chunked-file field type (endpoint /crud/chunk-upload is auto-registered) instead of defining manual chunk upload routes.",
+    "For large CSV imports, configure resourceConfig()['import'] with mode 'auto' or 'queued' and optional chunked_upload => true."
+  ]
+}
+

@@ -226,6 +226,10 @@ class CrudServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/../stubs' => base_path('stubs/crud'),
         ], 'crud-stubs');
+
+        $this->publishes([
+            __DIR__ . '/../resources/boost/skills/laravel-inertia-crud' => base_path('.agents/skills/laravel-inertia-crud'),
+        ], 'crud-ai');
     }
 
     /**
