@@ -8,20 +8,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Search, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { DataTableFacetedFilter } from './DataTableFacetedFilter';
 import { DatePicker } from './DatePicker';
 import { DatePickerWithRange } from './DatePickerWithRange';
-import { useState, useEffect } from 'react';
+import type { FilterConfig } from './types';
 
-export interface FilterConfig {
-    key: string;
-    type: 'select' | 'boolean' | 'date_range' | 'date';
-    label: string;
-    options?: { label: string; value: string }[];
-    column?: string;
-    multiple?: boolean;
-    separator?: string;
-}
+export type { FilterConfig };
 
 interface FilterBarProps {
     filters: FilterConfig[];
@@ -29,9 +22,9 @@ interface FilterBarProps {
     onChange: (key: string, value: string) => void;
     onChangeMany?: (updates: Record<string, string>) => void;
     onReset: () => void;
-    // Search support
     search: string;
     onSearch: (value: string) => void;
+    defaultSeparator?: string;
 }
 
 const DEFAULT_SEPARATOR = '--';
@@ -44,6 +37,7 @@ export function FilterBar({
     onReset,
     search,
     onSearch,
+    defaultSeparator = DEFAULT_SEPARATOR,
 }: FilterBarProps) {
     const [localSearch, setLocalSearch] = useState(search);
 
@@ -60,13 +54,16 @@ export function FilterBar({
         return () => clearTimeout(timer);
     }, [localSearch, search, onSearch]);
 
+    // Only count active search and filter_* params (not sort/direction/per_page)
     const hasActiveFilters =
-        Object.values(values).some((v) => v && v.length > 0) ||
-        search.length > 0;
+        search.length > 0 ||
+        Object.entries(values).some(
+            ([k, v]) => k.startsWith('filter_') && Boolean(v && v.length > 0),
+        );
 
     const handleFilterToggle = (key: string, value: string) => {
         const filter = filters.find((f) => `filter_${f.key}` === key);
-        const separator = filter?.separator ?? DEFAULT_SEPARATOR;
+        const separator = filter?.separator ?? defaultSeparator;
         const currentVal = values[key] ?? '';
         const currentArray = currentVal ? currentVal.split(separator) : [];
 
@@ -93,6 +90,17 @@ export function FilterBar({
                 const filterKey = `filter_${filter.key}`;
                 const currentValue = values[filterKey] ?? '';
 
+                if (filter.type === 'text') {
+                    return (
+                        <TextFilterInput
+                            key={filter.key}
+                            placeholder={filter.placeholder ?? filter.label}
+                            value={currentValue}
+                            onChange={(v) => onChange(filterKey, v)}
+                        />
+                    );
+                }
+
                 if (filter.type === 'boolean') {
                     return (
                         <Select
@@ -114,7 +122,7 @@ export function FilterBar({
 
                 if (filter.type === 'select' && filter.options) {
                     if (filter.multiple) {
-                        const separator = filter.separator ?? DEFAULT_SEPARATOR;
+                        const separator = filter.separator ?? defaultSeparator;
                         const selectedValues = new Set(
                             currentValue ? currentValue.split(separator) : [],
                         );
@@ -224,6 +232,7 @@ export function FilterBar({
 
             {hasActiveFilters && (
                 <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={onReset}
@@ -234,5 +243,39 @@ export function FilterBar({
                 </Button>
             )}
         </div>
+    );
+}
+
+function TextFilterInput({
+    placeholder,
+    value,
+    onChange,
+}: {
+    placeholder: string;
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    const [local, setLocal] = useState(value);
+
+    useEffect(() => {
+        setLocal(value);
+    }, [value]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (local !== value) {
+                onChange(local);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [local, value, onChange]);
+
+    return (
+        <Input
+            placeholder={placeholder}
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            className="h-8 w-[150px] text-sm"
+        />
     );
 }

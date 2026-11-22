@@ -24,9 +24,21 @@ export const theme = {
 
 export type Theme = typeof theme;
 
+export interface CustomThemeColors {
+  primary?: string;
+  sidebarBackground?: string;
+  sidebarForeground?: string;
+  sidebarPrimary?: string;
+  sidebarPrimaryForeground?: string;
+  sidebarAccent?: string;
+  sidebarAccentForeground?: string;
+  sidebarBorder?: string;
+  sidebarRing?: string;
+}
+
 // Expose an easy way to customize the dashboard theme dynamically without editing app.css
-export const customThemeColors = {
-  // Primary brand color (HSL format: "H S% L%")
+export const customThemeColors: CustomThemeColors = {
+  // Primary brand color (OKLCH or HSL format)
   primary: "oklch(0.59 0.16 241.96)",
 
   // Sidebar Colors
@@ -40,7 +52,7 @@ export const customThemeColors = {
   // sidebarRing: 'oklch(0.439 0 0)',
 };
 
-export function applyCustomTheme(colors = customThemeColors) {
+export function applyCustomTheme(colors: CustomThemeColors = customThemeColors) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
 

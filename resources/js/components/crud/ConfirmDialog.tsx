@@ -49,9 +49,10 @@ export function ConfirmDialog({
                 </DialogHeader>
                 <DialogFooter>
                     <DialogClose asChild>
-                        <Button variant="outline">{cancelLabel}</Button>
+                        <Button type="button" variant="outline">{cancelLabel}</Button>
                     </DialogClose>
                     <Button
+                        type="button"
                         variant={variant}
                         onClick={handleConfirm}
                         disabled={loading}

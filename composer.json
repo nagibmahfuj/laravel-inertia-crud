@@ -1,6 +1,6 @@
 {
     "name": "nagibmahfuj/laravel-inertia-crud",
-    "description": "Config-driven CRUD scaffolding for Laravel + Inertia.js (React/TypeScript) with interactive generator, built-in search, filters, sorting, export, import, and role-based permissions.",
+    "description": "Config-driven CRUD scaffolding for Laravel + Inertia.js (React/TypeScript) with interactive generator, built-in search, filters, sorting, export, import, native chunked uploads, and role-based permissions.",
     "keywords": [
         "laravel",
         "inertia",
@@ -10,7 +10,8 @@
         "admin",
         "dashboard",
         "generator",
-        "scaffolding"
+        "scaffolding",
+        "chunked-upload"
     ],
     "type": "library",
     "license": "MIT",
@@ -30,8 +31,8 @@
         "inertiajs/inertia-laravel": "^1.0|^2.0|^3.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0|^10.0",
-        "pestphp/pest": "^3.0"
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0"
     },
     "suggest": {
         "spatie/laravel-permission": "For role-based permission resolution via Spatie's HasRoles trait"
@@ -46,6 +47,9 @@
             "NagibMahfuj\\Crud\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "test": "pest"
+    },
     "extra": {
         "laravel": {
             "providers": [
@@ -56,6 +60,9 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
     }
 }

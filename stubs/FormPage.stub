@@ -1,32 +1,13 @@
 import ResourceForm from '@/components/crud/ResourceForm';
+import type { ResourceFormProps } from '@/components/crud/types';
 import AppLayout from '@/layouts/app-layout';
 
-export default function Form(props: any) {
-    const isEdit = props.mode === 'edit';
-    const route = isEdit
-        ? `/dashboard/{{ routePrefix }}/${props.record?.id}`
-        : '/dashboard/{{ routePrefix }}';
-
-    return (
-        <ResourceForm
-            {...props}
-            submitRoute={route}
-            indexRoute="/dashboard/{{ routePrefix }}"
-        />
-    );
+export default function Form(props: ResourceFormProps) {
+    return <ResourceForm {...props} />;
 }
 
-Form.layout = (page: any) => {
-    const isEdit = page.props?.mode === 'edit';
-    return (
-        <AppLayout
-            breadcrumbs={[
-                { title: 'Dashboard', href: '/dashboard' },
-                { title: '{{ modelPlural }}', href: '/dashboard/{{ routePrefix }}' },
-                { title: isEdit ? 'Edit' : 'Create', href: '' },
-            ]}
-        >
-            {page}
-        </AppLayout>
-    );
-};
+Form.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);

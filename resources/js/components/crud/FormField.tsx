@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Check, ChevronsUpDown, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import {
     Command,
     CommandEmpty,
@@ -15,36 +10,50 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown, Trash2, X } from 'lucide-react';
+import ChunkedFileInput from './ChunkedFileInput';
+import type { FieldConfig } from './types';
 
-export interface FieldConfig {
-    key: string;
-    label: string;
-    type:
-        | 'text'
-        | 'email'
-        | 'password'
-        | 'number'
-        | 'textarea'
-        | 'select'
-        | 'datetime'
-        | 'date'
-        | 'toggle'
-        | 'file'
-        | 'options-builder'
-        | 'hidden'
-        | 'repeater';
+export type { FieldConfig };
 
-    placeholder?: string;
-    options?: { label: string; value: string }[];
-    required?: boolean;
-    disabled?: boolean;
-    rules?: string;
-    default?: any;
+export function formatDateTimeLocal(val: any): string {
+    if (!val) return '';
+    try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) {
+            if (typeof val === 'string') {
+                return val.replace(' ', 'T').slice(0, 16);
+            }
+            return '';
+        }
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {
+        return '';
+    }
+}
+
+export function formatDateInput(val: any): string {
+    if (!val) return '';
+    if (typeof val === 'string') {
+        const datePart = val.split(' ')[0].split('T')[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            return datePart;
+        }
+    }
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 interface FormFieldProps {
@@ -54,6 +63,7 @@ interface FormFieldProps {
     errors?: Record<string, string>;
     allValues?: any;
     onChange: (key: string, value: any) => void;
+    onUploadingChange?: (key: string, isUploading: boolean) => void;
 }
 
 export function FormField({
@@ -63,6 +73,7 @@ export function FormField({
     errors,
     allValues,
     onChange,
+    onUploadingChange,
 }: FormFieldProps) {
     if (field.type === 'hidden') return null;
 
@@ -164,7 +175,9 @@ export function FormField({
                     <Textarea
                         id={id}
                         value={value ?? ''}
-                        onChange={(e) => onChange(field.key, e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                            onChange(field.key, e.target.value)
+                        }
                         placeholder={field.placeholder}
                         disabled={field.disabled}
                         className="mt-1"
@@ -183,28 +196,47 @@ export function FormField({
                 );
             }
 
-            case 'toggle':
+            case 'checkbox':
+            case 'toggle': {
+                const isChecked = Boolean(
+                    value && value !== '0' && value !== 'false',
+                );
                 return (
-                    <div className="mt-1 flex items-center space-x-2">
+                    <div className="border-border/80 bg-muted/20 mt-1 flex items-center space-x-3 rounded-lg border p-3.5 transition-colors">
                         <Checkbox
                             id={id}
-                            checked={!!value}
+                            checked={isChecked}
                             onCheckedChange={(checked) =>
-                                onChange(field.key, checked)
+                                onChange(field.key, Boolean(checked))
                             }
                             disabled={field.disabled}
                         />
-                        <Label htmlFor={id} className="text-sm font-normal">
-                            {field.placeholder ?? 'Enable'}
-                        </Label>
+                        <div className="space-y-0.5">
+                            <Label
+                                htmlFor={id}
+                                className="cursor-pointer text-sm font-medium"
+                            >
+                                {field.label}
+                                {field.required && (
+                                    <span className="text-destructive"> *</span>
+                                )}
+                            </Label>
+                            {field.placeholder && (
+                                <p className="text-muted-foreground text-xs">
+                                    {field.placeholder}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 );
+            }
 
             case 'file':
                 return (
                     <Input
                         id={id}
                         type="file"
+                        accept={field.accept}
                         onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) onChange(field.key, file);
@@ -214,12 +246,34 @@ export function FormField({
                     />
                 );
 
+            case 'chunked-file':
+                return (
+                    <ChunkedFileInput
+                        id={id}
+                        value={value}
+                        existingFile={field.existing_file ?? undefined}
+                        accept={field.accept}
+                        endpoint={field.endpoint}
+                        chunkSizeMB={field.chunk_size_mb}
+                        maxSizeMB={field.max_size_mb}
+                        maxRetries={field.max_retries}
+                        uploadConfig={field.upload_config}
+                        placeholder={field.placeholder}
+                        disabled={field.disabled}
+                        onChange={(val) => onChange(field.key, val)}
+                        onUploadingChange={(isUp) =>
+                            onUploadingChange?.(field.key, isUp)
+                        }
+                    />
+                );
+
             case 'datetime': {
+                const formattedValue = formatDateTimeLocal(value);
                 return (
                     <Input
                         id={id}
                         type="datetime-local"
-                        value={value}
+                        value={formattedValue}
                         onChange={(e) => onChange(field.key, e.target.value)}
                         disabled={field.disabled}
                         className="mt-1"
@@ -228,15 +282,7 @@ export function FormField({
             }
 
             case 'date': {
-                let formattedValue = value ?? '';
-                if (typeof formattedValue === 'string') {
-                    formattedValue = formattedValue.split(' ')[0];
-                }
-                if (formattedValue && !isNaN(Date.parse(formattedValue))) {
-                    const d = new Date(formattedValue);
-                    const pad = (n: number) => n.toString().padStart(2, '0');
-                    formattedValue = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-                }
+                const formattedValue = formatDateInput(value);
                 return (
                     <Input
                         id={id}
@@ -251,9 +297,6 @@ export function FormField({
 
             case 'repeater': {
                 const items = Array.isArray(value) ? value : [];
-                // field.options would contain schema for repeater items if needed,
-                // but since it's generic, we assume parent passes field.fields etc?
-                // Actually, let's look at how we'll use it in StockTransferController.
                 return (
                     <div className="bg-muted/10 mt-2 space-y-4 rounded-md border p-4">
                         {items.map((item: any, index: number) => (
@@ -262,42 +305,47 @@ export function FormField({
                                 className="flex items-end gap-3 border-b pb-4 last:border-0 last:pb-0"
                             >
                                 <div className="grid flex-1 grid-cols-2 gap-3">
-                                    {(field as any).fields?.map(
-                                        (f: FieldConfig) => {
-                                            const nestedKey = `${field.key}.${index}.${f.key}`;
-                                            const nestedError = errors
-                                                ? errors[nestedKey]
-                                                : undefined;
+                                    {field.fields?.map((f: FieldConfig) => {
+                                        const nestedKey = `${field.key}.${index}.${f.key}`;
+                                        const nestedError = errors
+                                            ? errors[nestedKey]
+                                            : undefined;
 
-                                            return (
-                                                <div key={f.key}>
-                                                    <FormField
-                                                        field={f}
-                                                        value={item[f.key]}
-                                                        error={nestedError}
-                                                        errors={errors}
-                                                        onChange={(k, v) => {
-                                                            const newItems = [
-                                                                ...items,
-                                                            ];
-                                                            newItems[index] = {
-                                                                ...newItems[
-                                                                    index
-                                                                ],
-                                                                [k]: v,
-                                                            };
-                                                            onChange(
-                                                                field.key,
-                                                                newItems,
-                                                            );
-                                                        }}
-                                                    />
-                                                </div>
-                                            );
-                                        },
-                                    )}
+                                        return (
+                                            <div key={f.key}>
+                                                <FormField
+                                                    field={f}
+                                                    value={item[f.key]}
+                                                    error={nestedError}
+                                                    errors={errors}
+                                                    onChange={(k, v) => {
+                                                        const newItems = [
+                                                            ...items,
+                                                        ];
+                                                        newItems[index] = {
+                                                            ...newItems[index],
+                                                            [k]: v,
+                                                        };
+                                                        onChange(
+                                                            field.key,
+                                                            newItems,
+                                                        );
+                                                    }}
+                                                    onUploadingChange={
+                                                        onUploadingChange
+                                                            ? (k, isUp) =>
+                                                                  onUploadingChange(
+                                                                      `${field.key}.${index}.${k}`,
+                                                                      isUp,
+                                                                  )
+                                                            : undefined
+                                                    }
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                {!(field as any).hide_remove_button && (
+                                {!field.hide_remove_button && (
                                     <Button
                                         type="button"
                                         variant="ghost"
@@ -314,18 +362,16 @@ export function FormField({
                                 )}
                             </div>
                         ))}
-                        {!(field as any).hide_add_button && (
+                        {!field.hide_add_button && (
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                    const newItem = {};
-                                    (field as any).fields?.forEach(
-                                        (f: FieldConfig) => {
-                                            (newItem as any)[f.key] = '';
-                                        },
-                                    );
+                                    const newItem: Record<string, any> = {};
+                                    field.fields?.forEach((f: FieldConfig) => {
+                                        newItem[f.key] = f.default ?? '';
+                                    });
                                     onChange(field.key, [...items, newItem]);
                                 }}
                             >
@@ -366,7 +412,7 @@ export function FormField({
 
     return (
         <div>
-            {field.type !== 'toggle' && (
+            {field.type !== 'toggle' && field.type !== 'checkbox' && (
                 <Label htmlFor={id}>
                     {field.label}
                     {field.required && (
@@ -392,7 +438,7 @@ function ComboboxField({
     id: string;
 }) {
     const [open, setOpen] = useState(false);
-    const isMultiple = !!(field as any).multiple;
+    const isMultiple = Boolean(field.multiple);
 
     const options = field.options || [];
 
@@ -405,6 +451,7 @@ function ComboboxField({
                     <PopoverTrigger asChild>
                         <Button
                             id={id}
+                            type="button"
                             variant="outline"
                             role="combobox"
                             aria-expanded={open}
@@ -487,10 +534,9 @@ function ComboboxField({
                                     variant="secondary"
                                     className="pr-1"
                                 >
-                                    <span>
-                                        {opt?.label ?? val}
-                                    </span>
+                                    <span>{opt?.label ?? val}</span>
                                     <Button
+                                        type="button"
                                         variant="ghost"
                                         size="icon"
                                         className="ml-1 h-4 w-4 rounded-full p-0"
@@ -526,6 +572,7 @@ function ComboboxField({
             <PopoverTrigger asChild>
                 <Button
                     id={id}
+                    type="button"
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}

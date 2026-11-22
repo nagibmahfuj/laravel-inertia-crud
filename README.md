@@ -3,24 +3,27 @@
 [![Latest Version](https://img.shields.io/packagist/v/nagibmahfuj/laravel-inertia-crud.svg)](https://packagist.org/packages/nagibmahfuj/laravel-inertia-crud)
 [![License](https://img.shields.io/packagist/l/nagibmahfuj/laravel-inertia-crud.svg)](https://packagist.org/packages/nagibmahfuj/laravel-inertia-crud)
 
-A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/TypeScript)**. Define your columns, fields, filters, and permissions in a single PHP config array — the package handles searching, filtering, sorting, pagination, validation, CSV export, and renders beautiful React UI components automatically.
+A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/TypeScript)**. Define your columns, fields, filters, chunked uploads, and actions in a single PHP `resourceConfig()` array — the package handles searching, filtering, sorting, pagination, validation, bulk deletion, CSV export, native chunked file uploads, and renders normalized React/TypeScript UI components automatically.
+
+> [!NOTE]
+> Upgrading from **v1.x** to **v2.0**? See the dedicated [Upgrade Guide (v1 → v2)](UPGRADE.md) for breaking changes and step-by-step migration instructions.
+
+---
 
 ## ✨ Features
 
-- **Config-Driven**: Define models, columns, fields, filters, and actions in a single `resourceConfig()` array
-- **Interactive Generator**: Beautiful `php artisan crud:generate` wizard with model/column auto-detection
-- **Built-in Search**: Full-text search across multiple columns including relationships
-- **Advanced Filters**: Select, multi-select, boolean, date, and date-range filters
-- **Server-Side Sorting**: Sortable columns with direction toggle
-- **CSV Export**: One-click data export with custom formatters
-- **File Import**: Built-in import UI with file validation and progress
-- **Role-Based Permissions**: Configurable per-resource permissions with read-only, create-only, and no-delete flags
-- **Spatie Integration**: Auto-detects `spatie/laravel-permission` — zero config required
-- **Lifecycle Hooks**: `beforeSave()` / `afterSave()` hooks for custom transform logic
-- **Audit Columns**: Auto-sets `created_by` / `updated_by` if they exist
-- **Publishable Components**: shadcn/ui-based React components you fully own and customize
-- **Theming**: Runtime CSS variable customization for branding
-- **Laravel 11/12/13** compatible
+- **Config-Driven & Normalized**: Define models, titles, breadcrumbs, routes, columns, fields, filters, and actions in a single `resourceConfig()` array — `ResourceIndex`, `ResourceForm`, and `AppLayout` consume normalized `meta` automatically with zero boilerplate props
+- **Action-Driven Visibility & Enforcement**: Control `create`, `edit`, `delete`, `show`, `export`, and `import` buttons and backend access from `actions` + `BaseCrudPolicy`
+- **Native Chunked File Uploads**: Built-in `chunked-file` field type with an automatic package endpoint (`POST /crud/chunk-upload`), per-field chunk/size/accept/disk/directory configuration, signed server-side validation, atomic reassembly, automatic disk persistence, and stale upload cleanup (`crud:cleanup-chunks`)
+- **Polished Interactive Generator**: `php artisan crud:generate` displays package/environment info, discovers models (including nested folders), detects schema columns, lets you choose enabled actions, and generates clean v2 stubs
+- **Built-in Search & Advanced Filters**: Multi-column & relationship search plus `select`, multi-select, `boolean`, `text`, `date`, and `date_range` filters (including relationship filtering)
+- **Server-Side Sorting & Safe Pagination**: Whitelisted sort direction, safe `per_page` bounds, and automatic primary-key fallback for non-timestamped models
+- **Bulk Destroy**: Built-in `bulkDestroy` route & controller action when `row_selection` is enabled
+- **Role-Based Permissions**: Configurable per-resource `roles`, `read_only`, `create_only`, and `no_delete` overrides with automatic `spatie/laravel-permission` detection
+- **Lifecycle Hooks & Audit Columns**: `beforeSave()` / `afterSave()` hooks and automatic `created_by` / `updated_by` population
+- **UUID / ULID Support**: Standard integer and string primary keys supported across `show`, `edit`, `update`, `destroy`, and `bulkDestroy`
+- **Publishable shadcn/ui Components & Theming**: Full ownership of TypeScript/React components plus runtime CSS variable theming
+- **Laravel 11 / 12 / 13 & Inertia v1 / v2 / v3** compatible
 
 ---
 
@@ -36,14 +39,14 @@ A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/T
 
 ### Frontend Prerequisites
 
-Your Laravel app must have the following installed (standard in Laravel Breeze React/TypeScript starter):
+Your Laravel app must have the following installed (standard in Laravel React/TypeScript starter kits):
 
-- **shadcn/ui** components: `Button`, `Input`, `Select`, `Label`, `Table`, `Badge`, `Checkbox`, `Dialog`, `Calendar`, `Popover`, `Card`, `Progress`, `Separator`, `DropdownMenu`, `Command`
+- **shadcn/ui** components: `Button`, `Input`, `Select`, `Label`, `Table`, `Badge`, `Checkbox`, `Dialog`, `Calendar`, `Popover`, `Card`, `Progress`, `Separator`, `DropdownMenu`, `Textarea`, `Command`
 - **lucide-react** for icons
 - **date-fns** for date formatting
 - **clsx** + **tailwind-merge** for class merging
 - **lodash** (for `get` utility)
-- **react-day-picker** (for calendar/date range)
+- **react-day-picker** (v9 / v10 for calendar/date range)
 
 ---
 
@@ -52,10 +55,10 @@ Your Laravel app must have the following installed (standard in Laravel Breeze R
 ### 1. Install the package
 
 ```bash
-composer require nagibmahfuj/laravel-inertia-crud
+composer require nagibmahfuj/laravel-inertia-crud:^2.0
 ```
 
-The service provider is auto-discovered.
+The service provider and native chunk upload endpoints are auto-discovered.
 
 ### 2. Publish the config
 
@@ -63,9 +66,9 @@ The service provider is auto-discovered.
 php artisan vendor:publish --tag=crud-config
 ```
 
-This creates `config/crud.php` where you define resource permissions.
+This creates `config/crud.php` where you configure permissions, default URL prefix, root breadcrumb, pagination limits, chunked uploads, and generator defaults.
 
-### 3. Publish frontend components
+### 3. Publish frontend assets
 
 ```bash
 php artisan vendor:publish --tag=crud-assets
@@ -73,9 +76,11 @@ php artisan vendor:publish --tag=crud-assets
 
 This publishes:
 
-- `resources/js/components/crud/` — All React components (ResourceIndex, ResourceForm, FormField, FilterBar, DataTable, etc.)
+- `resources/js/components/crud/` — All React components (`ResourceIndex`, `ResourceForm`, `FormField`, `ChunkedFileInput`, `FilterBar`, `DataTable`, `FileImport`, `ExportButton`, `types.ts`, etc.)
 - `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
-- `resources/js/lib/crud-theme.ts` — Dashboard theme configuration
+- `resources/js/hooks/use-nav-items.ts` — Dynamic permission-aware navigation hook
+
+You can also publish selectively with `--tag=crud-components`, `--tag=crud-lib`, or `--tag=crud-stubs`.
 
 ### 4. Install npm dependencies (if not already installed)
 
@@ -91,32 +96,30 @@ npx shadcn@latest add button input label select table badge checkbox dialog cale
 ```
 
 > [!NOTE]
-> If you get installation error for shadcn/ui components, please follow below steps:
-
-- Destroy any rogue pnpm lock or workspace files in your current directory `rm -f pnpm-lock.yaml pnpm-workspace.yaml`
-
-- Hardcode 'npm' as your package manager inside package.json `npm pkg set packageManager="npm@10.8.0"`
-
-- Now run the shadcn command again!
+> If you get an installation error for shadcn/ui components:
+> - Remove any stray pnpm files: `rm -f pnpm-lock.yaml pnpm-workspace.yaml`
+> - Pin npm in `package.json`: `npm pkg set packageManager="npm@10.8.0"`
+> - Re-run the `npx shadcn@latest add ...` command.
 
 ---
 
 ## ⚡ Quick Start — Interactive Generator
 
-The fastest way to create a new CRUD resource:
+The fastest way to scaffold a new CRUD resource:
 
 ```bash
 php artisan crud:generate
 ```
 
-This launches a step-by-step wizard that:
+The command renders a package/environment overview banner and walks you through a 7-step wizard:
 
-1. **Scans your models** from `app/Models/` and lets you pick one
-2. **Suggests a route prefix** (e.g., `products`)
-3. **Suggests a page prefix** (e.g., `Dashboard/Products`)
-4. **Detects database columns** from your table schema, mapping types automatically
-5. **Lets you choose** what to generate (controller, policy, pages, config)
-6. **Shows a summary** and generates all files
+1. **Select a model** discovered from `app/Models/` (including nested subdirectories)
+2. **Route prefix** (e.g., `products`)
+3. **Inertia page prefix** (e.g., `Dashboard/Products`)
+4. **Database column inspection** with automatic CRUD type mapping
+5. **Enabled actions** (`create`, `edit`, `delete`, `show`, `export`, `import`)
+6. **Artifacts to generate** (Controller, Policy, Inertia TSX Pages, `config/crud.php` permissions)
+7. **Confirmation summary** & generation status table
 
 ### Non-Interactive Mode
 
@@ -124,29 +127,30 @@ This launches a step-by-step wizard that:
 # Generate everything for a model
 php artisan crud:generate --model=Product --all
 
-# Just the controller
-php artisan crud:generate --model=Product --route-prefix=products
+# Specify enabled actions explicitly
+php artisan crud:generate --model=Product --all --actions=create,edit,delete,show,export,import
 
-# Controller + policy with overwrite
-php artisan crud:generate --model=Product --policy --force
+# Nested model with custom page prefix
+php artisan crud:generate --model=Billing/Invoice --all --page-prefix=Admin/Billing/Invoices
 
-# Custom controller namespace
-php artisan crud:generate --model=Product --all --controller-namespace="App\Http\Controllers\Admin"
+# Overwrite existing files
+php artisan crud:generate --model=Product --all --force
 ```
 
 ### All CLI Options
 
-| Option                   | Description                                                |
-| ------------------------ | ---------------------------------------------------------- |
-| `--model`, `-M`          | Model class name (e.g., `Product`)                         |
-| `--route-prefix`         | Route URL prefix (e.g., `products`)                        |
-| `--page-prefix`          | Inertia page directory (e.g., `Dashboard/Products`)        |
-| `--controller-namespace` | Controller namespace                                       |
-| `--policy`               | Also generate a policy                                     |
-| `--pages`                | Also generate Inertia TSX pages                            |
-| `--permissions`          | Also add entry to crud config                              |
-| `--all`                  | Generate everything (controller + policy + pages + config) |
-| `--force`                | Overwrite existing files                                   |
+| Option                   | Description                                                      |
+| ------------------------ | ---------------------------------------------------------------- |
+| `--model`, `-M`          | Model class name (e.g., `Product` or `Billing/Invoice`)          |
+| `--route-prefix`         | Route URL prefix (e.g., `products`)                              |
+| `--page-prefix`          | Inertia page directory (e.g., `Dashboard/Products`)              |
+| `--controller-namespace` | Controller namespace                                             |
+| `--actions`              | Comma-separated actions (`create,edit,delete,show,export,import`)|
+| `--policy`               | Also generate a policy                                           |
+| `--pages`                | Also generate Inertia TSX pages                                  |
+| `--permissions`          | Also add entry to `config/crud.php`                              |
+| `--all`                  | Generate everything (controller + policy + pages + config)       |
+| `--force`                | Overwrite existing files                                         |
 
 ---
 
@@ -165,6 +169,7 @@ php artisan make:model Product -m
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Models\Product;
 use NagibMahfuj\Crud\CrudController;
 
 class ProductController extends CrudController
@@ -172,29 +177,38 @@ class ProductController extends CrudController
     protected function resourceConfig(): array
     {
         return [
-            'model'         => \App\Models\Product::class,
-            'resource_name' => 'Product',
-            'route_prefix'  => 'products',
-            'page_prefix'   => 'Dashboard/Products',
-            'per_page'      => 10,
-            'searchable'    => ['name', 'sku', 'description'],
-            'with'          => ['category'],       // Eager load
-            'with_count'    => ['orders'],          // Count relations
-            'actions'       => ['create', 'edit', 'delete', 'show'],
+            'model'             => Product::class,
+            'resource_name'     => 'Product',
+            'resource_plural'   => 'Products',        // Optional (auto-pluralized from resource_name)
+            'title'             => 'Product Catalog', // Optional index page title override
+            'description'       => 'Manage store products and downloadable assets.',
+            'route_prefix'      => 'products',
+            'page_prefix'       => 'Dashboard/Products',
+            'per_page'          => 15,
+            'default_sort'      => 'id',
+            'default_direction' => 'desc',
+            'searchable'        => ['name', 'sku', 'category.name'],
+            'with'              => ['category'],
+            'with_count'        => ['orders'],
+            'row_selection'     => true,              // Enables checkboxes & built-in bulkDestroy
+            'actions'           => ['create', 'edit', 'delete', 'show', 'export', 'import'],
+            'import_format_url' => '/samples/products-template.csv',
 
             'columns' => [
-                ['key' => 'id',       'label' => 'ID',       'sortable' => true,  'type' => 'number'],
-                ['key' => 'name',     'label' => 'Name',     'sortable' => true,  'type' => 'text'],
-                ['key' => 'sku',      'label' => 'SKU',      'sortable' => true,  'type' => 'text'],
-                ['key' => 'price',    'label' => 'Price',    'sortable' => true,  'type' => 'number'],
-                ['key' => 'status',   'label' => 'Status',   'sortable' => true,  'type' => 'badge'],
+                ['key' => 'id',            'label' => 'ID',       'sortable' => true,  'type' => 'number'],
+                ['key' => 'image_path',    'label' => 'Image',    'sortable' => false, 'type' => 'image'],
+                ['key' => 'name',          'label' => 'Name',     'sortable' => true,  'type' => 'text'],
+                ['key' => 'sku',           'label' => 'SKU',      'sortable' => true,  'type' => 'text'],
+                ['key' => 'status',        'label' => 'Status',   'sortable' => true,  'type' => 'status'],
+                ['key' => 'is_active',     'label' => 'Active',   'sortable' => true,  'type' => 'boolean'],
                 [
-                    'key'            => 'category.name',
-                    'label'          => 'Category',
-                    'sortable'       => false,
-                    'type'           => 'text',
-                    'export_format'  => fn ($record) => $record->category?->name ?? 'N/A',
+                    'key'           => 'category.name',
+                    'label'         => 'Category',
+                    'sortable'      => false,
+                    'type'          => 'text',
+                    'export_format' => fn ($record) => $record->category?->name ?? 'N/A',
                 ],
+                ['key' => 'created_at',    'label' => 'Created',  'sortable' => true,  'type' => 'datetime'],
             ],
 
             'filters' => [
@@ -203,57 +217,44 @@ class ProductController extends CrudController
                     'label'   => 'Status',
                     'type'    => 'select',
                     'options' => [
-                        ['label' => 'Active',   'value' => 'active'],
-                        ['label' => 'Inactive', 'value' => 'inactive'],
+                        ['label' => 'Draft',     'value' => 'draft'],
+                        ['label' => 'Published', 'value' => 'published'],
                     ],
                 ],
                 [
-                    'key'     => 'category_id',
-                    'label'   => 'Category',
-                    'type'    => 'select',
-                    'multiple'   => true,
-                    'options' => [], // Inject dynamically in create()/edit()
+                    'key'      => 'category_id',
+                    'label'    => 'Category',
+                    'type'     => 'select',
+                    'multiple' => true,
+                    'options'  => [],
                 ],
-                [
-                    'key'   => 'created_at',
-                    'label' => 'Created',
-                    'type'  => 'date_range',
-                ],
+                ['key' => 'is_active',  'label' => 'Active',  'type' => 'boolean'],
+                ['key' => 'sku',        'label' => 'SKU',     'type' => 'text'],
+                ['key' => 'created_at', 'label' => 'Created', 'type' => 'date_range'],
             ],
 
             'fields' => [
-                ['key' => 'name',        'label' => 'Product Name', 'type' => 'text',     'rules' => 'required|string|max:255',      'required' => true],
+                ['key' => 'name',        'label' => 'Product Name', 'type' => 'text',     'rules' => 'required|string|max:255', 'required' => true],
                 ['key' => 'sku',         'label' => 'SKU',          'type' => 'text',     'rules' => 'required|string|unique:products,sku,{id}', 'required' => true],
                 ['key' => 'description', 'label' => 'Description',  'type' => 'textarea', 'rules' => 'nullable|string'],
-                ['key' => 'price',       'label' => 'Price',        'type' => 'number',   'rules' => 'required|numeric|min:0',       'required' => true],
-                ['key' => 'category_id', 'label' => 'Category',     'type' => 'select',   'rules' => 'required|exists:categories,id', 'required' => true, 'options' => []],
-                ['key' => 'status',      'label' => 'Status',       'type' => 'select',   'rules' => 'required|in:active,inactive',  'required' => true,
-                    'options' => [
-                        ['label' => 'Active',   'value' => 'active'],
-                        ['label' => 'Inactive', 'value' => 'inactive'],
-                    ],
+                ['key' => 'price',       'label' => 'Price',        'type' => 'number',   'rules' => 'required|numeric|min:0', 'required' => true],
+                ['key' => 'is_active',   'label' => 'Active',       'type' => 'checkbox', 'default' => true],
+                [
+                    'key'           => 'manual_file',
+                    'label'         => 'Product Manual (PDF / ZIP)',
+                    'type'          => 'chunked-file',
+                    'rules'         => 'nullable',
+                    'accept'        => '.pdf,.zip',
+                    'chunk_size_mb' => 8,
+                    'max_size_mb'   => 250,
+                    'disk'          => 'public',
+                    'directory'     => 'products/manuals',
+                    'path_column'   => 'manual_path',
+                    'name_column'   => 'manual_name',
+                    'size_column'   => 'manual_size',
                 ],
-                ['key' => 'image',       'label' => 'Image',        'type' => 'file',     'rules' => 'nullable|image|max:2048',      'optional_on_update' => true],
             ],
         ];
-    }
-
-    /**
-     * Inject dynamic select options.
-     */
-    public function create()
-    {
-        $config = $this->resourceConfig();
-        // Override to inject category options
-        return parent::create();
-    }
-
-    /**
-     * Hash password before saving (example hook).
-     */
-    protected function beforeSave($model, array $data, string $action): void
-    {
-        // Custom logic before saving
     }
 }
 ```
@@ -273,12 +274,6 @@ class ProductPolicy extends BaseCrudPolicy
     {
         return 'products';
     }
-
-    // Override individual methods if needed:
-    // public function delete(Authenticatable $user, $model): bool
-    // {
-    //     return $user->hasRole('super_admin');
-    // }
 }
 ```
 
@@ -289,13 +284,15 @@ In `config/crud.php`:
 ```php
 'resources' => [
     'products' => [
-        'roles' => ['super_admin', 'admin', 'manager'],
-        'create_only_roles' => ['manager'],  // Managers can create but not edit/delete
+        'roles'       => ['super_admin', 'admin', 'manager', 'viewer'],
+        'read_only'   => ['viewer'],   // Can view & export only (alias: 'read_only_roles')
+        'create_only' => ['manager'],  // Can view, export & create; cannot edit/delete/import (alias: 'create_only_roles')
+        'no_delete'   => ['admin'],    // Cannot delete (bool `true` disables delete for all; alias: 'no_delete_roles')
     ],
 ],
 
-'read_only_roles' => ['viewer'],    // Global: viewers can only see data
-'no_delete_roles' => ['manager'],   // Global: managers cannot delete anything
+'read_only_roles' => ['viewer'],  // Global: read-only across all resources
+'no_delete_roles' => ['manager'], // Global: cannot delete across all resources
 ```
 
 ### Step 5: Register Routes
@@ -310,93 +307,389 @@ Route::middleware(['auth', 'verified'])->prefix('dashboard')->group(function () 
 });
 ```
 
-The `Route::crudResource()` macro registers:
+`Route::crudResource()` automatically registers:
 
-- Standard `Route::resource()` routes (index, create, store, show, edit, update, destroy)
-- `GET products/export` → `ProductController@export` (if method exists)
-- `POST products/import` → `ProductController@import` (if method exists)
+- Standard `Route::resource()` routes (`index`, `create`, `store`, `show`, `edit`, `update`, `destroy`)
+- `GET {uri}/export` → `ProductController@export` (`{name}.export`, if method exists)
+- `POST {uri}/import` → `ProductController@import` (`{name}.import`, if method exists)
+- `POST {uri}/bulk-destroy` → `ProductController@bulkDestroy` (`{name}.bulk-destroy`, if method exists)
 
-### Step 6: Create Inertia Pages
+> You do **not** need to register any route for chunked uploads — `CrudServiceProvider` registers `POST /crud/chunk-upload` and `DELETE /crud/chunk-upload/{uploadId}` natively.
 
-**`resources/js/Pages/Dashboard/Products/Index.tsx`**
+### Step 6: Create Normalized Inertia Pages
+
+Because `CrudService::buildMeta()` provides normalized `title`, `description`, `routes`, `breadcrumbs`, `actions`, and import settings directly from `resourceConfig()`, your Inertia pages stay completely clean:
+
+**`resources/js/pages/Dashboard/Products/Index.tsx`**
 
 ```tsx
-import ResourceIndex from "@/components/crud/ResourceIndex";
+import ResourceIndex from '@/components/crud/ResourceIndex';
+import type { ResourceIndexProps } from '@/components/crud/types';
+import AppLayout from '@/layouts/app-layout';
 
-export default function Index(props: any) {
-  return (
-    <ResourceIndex
-      {...props}
-      title="Products"
-      baseRoute="/dashboard/products"
-      exportRoute="/dashboard/products/export"
-      breadcrumbs={[
-        { title: "Dashboard", href: "/dashboard" },
-        { title: "Products", href: "/dashboard/products" },
-      ]}
-    />
-  );
+export default function Index(props: ResourceIndexProps) {
+    return <ResourceIndex {...props} />;
 }
+
+Index.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);
 ```
 
-**`resources/js/Pages/Dashboard/Products/Form.tsx`**
+**`resources/js/pages/Dashboard/Products/Form.tsx`**
 
 ```tsx
-import ResourceForm from "@/components/crud/ResourceForm";
+import ResourceForm from '@/components/crud/ResourceForm';
+import type { ResourceFormProps } from '@/components/crud/types';
+import AppLayout from '@/layouts/app-layout';
 
-export default function Form(props: any) {
-  const isEdit = props.mode === "edit";
-  const route = isEdit
-    ? `/dashboard/products/${props.record?.id}`
-    : "/dashboard/products";
-
-  return (
-    <ResourceForm
-      {...props}
-      submitRoute={route}
-      indexRoute="/dashboard/products"
-      breadcrumbs={[
-        { title: "Dashboard", href: "/dashboard" },
-        { title: "Products", href: "/dashboard/products" },
-        { title: isEdit ? "Edit" : "Create", href: "" },
-      ]}
-    />
-  );
+export default function Form(props: ResourceFormProps) {
+    return <ResourceForm {...props} />;
 }
+
+Form.layout = (page: any) => (
+    <AppLayout breadcrumbs={page.props?.meta?.breadcrumbs ?? []}>
+        {page}
+    </AppLayout>
+);
+```
+
+Any prop (`title`, `description`, `baseRoute`, `exportRoute`, `importRoute`, `submitRoute`, `indexRoute`, `cellOverrides`, `rowActions`, `headerActions`) can still be passed on `<ResourceIndex />` or `<ResourceForm />` to override the `meta` default for a specific page.
+
+---
+
+## 📦 Normalized `resourceConfig()` & `meta` Contract
+
+### Supported `resourceConfig()` Keys
+
+| Key                  | Type           | Default / Description                                                                     |
+| -------------------- | -------------- | ----------------------------------------------------------------------------------------- |
+| `model`              | `string`       | **Required.** Model FQCN (e.g. `Product::class`)                                          |
+| `resource_name`      | `string`       | Singular display name (auto-derived from model class if omitted)                          |
+| `resource_plural`    | `string`       | Plural display name (`Str::plural($resource_name)`)                                       |
+| `title`              | `string\|null` | Index page title override (defaults to `resource_plural`)                                 |
+| `create_title`       | `string\|null` | Create form title override (defaults to `"Create {$resource_name}"`)                      |
+| `edit_title`         | `string\|null` | Edit form title override (defaults to `"Edit {$resource_name}"`)                          |
+| `show_title`         | `string\|null` | Show page title override (defaults to `"{$resource_name} Details"`)                       |
+| `description`        | `string\|null` | Optional subtitle rendered in `PageHeader`                                                |
+| `route_prefix`       | `string`       | Named route prefix (e.g. `'products'`)                                                    |
+| `base_route`         | `string\|null` | Override index base URL (auto-resolved via `route("{$route_prefix}.index", [], false)`)   |
+| `url_prefix`         | `string\|null` | Fallback URL prefix when named route isn't registered (defaults to `config('crud.url_prefix')`) |
+| `page_prefix`        | `string`       | Inertia page directory prefix (e.g. `'Dashboard/Products'`)                               |
+| `per_page`           | `int`          | Default rows per page (default `10`, clamped by `config('crud.max_per_page')`)            |
+| `searchable`         | `string[]`     | Columns / dot-notated relations to search (e.g. `['name', 'category.name']`)              |
+| `default_sort`       | `string`       | Default sort column (falls back to `created_at` or primary key for non-timestamped models)|
+| `default_direction`  | `string`       | `'asc'` or `'desc'` (default `'desc'`)                                                    |
+| `with`               | `string[]`     | Eloquent eager-loaded relations                                                           |
+| `with_count`         | `string[]`     | Eloquent `withCount` relations                                                            |
+| `actions`            | `string[]`     | Enabled actions: `'create'`, `'edit'`, `'delete'`, `'show'`, `'export'`, `'import'`       |
+| `row_selection`      | `bool`         | Enable multi-row selection checkboxes and `BulkActions` bar (with `bulkDestroy`)          |
+| `export_route`       | `string\|null` | Override export URL (auto-resolved when `'export'` is in `actions`)                       |
+| `import_route`       | `string\|null` | Override import URL (auto-resolved when `'import'` is in `actions`)                       |
+| `import_format_url`  | `string\|null` | Optional sample template URL shown in the Import dialog                                   |
+| `import_accept`      | `string`       | Accepted file types in Import modal (default `'.csv,.xlsx,.xls'`)                         |
+| `import_max_size_mb` | `int`          | Max file size in MB for Import modal (default `100`)                                      |
+| `breadcrumbs`        | `array\|null`  | Custom base breadcrumbs (`[['title' => '...', 'href' => '...']]`); Create/Edit/Details auto-appended |
+| `columns`            | `array[]`      | Index table & CSV export column definitions                                               |
+| `filters`            | `array[]`      | Index `FilterBar` filter definitions                                                      |
+| `fields`             | `array[]`      | Create/Edit `ResourceForm` field definitions                                              |
+
+---
+
+## 🧩 Native Chunked File Uploads (`chunked-file`)
+
+For large files (videos, desktop installers, archives) that exceed PHP `upload_max_filesize`, Nginx `client_max_body_size`, or Cloudflare's 100 MB request body limit, use the built-in `chunked-file` field type.
+
+### Zero-Route Setup
+
+`CrudServiceProvider` automatically registers:
+
+- `POST /crud/chunk-upload` (`crud.chunk-upload`) — receives chunk slices, validates limits/extensions, locks & assembles atomically, and returns a user-scoped token
+- `DELETE /crud/chunk-upload/{uploadId}` (`crud.chunk-upload.cancel`) — removes partial slices when a user cancels an upload
+
+Customize defaults globally in `config/crud.php`:
+
+```php
+'chunk_upload' => [
+    'enabled'            => true,
+    'route'              => '/crud/chunk-upload',
+    'route_name'         => 'crud.chunk-upload',
+    'middleware'         => ['web', 'auth'],
+    'disk'               => 'public',
+    'temp_directory'     => 'crud-chunks',
+    'chunk_size_mb'      => 5,
+    'max_chunk_size_mb'  => 25,
+    'max_file_size_mb'   => 512,
+    'max_retries'        => 3,
+    'ttl_hours'          => 6,
+    'allowed_extensions' => [],
+],
+```
+
+### Simple Single-Column Example
+
+When the model stores the file path directly in a column matching the field `key`:
+
+```php
+'fields' => [
+    [
+        'key'           => 'video_path',
+        'label'         => 'Performance Video',
+        'type'          => 'chunked-file',
+        'rules'         => 'required',
+        'optional_on_update' => false, // Existing file on edit satisfies `required` unless removed
+        'accept'        => '.mp4,.mov,.webm',
+        'chunk_size_mb' => 8,
+        'max_size_mb'   => 300,
+        'disk'          => 'public',
+        'directory'     => 'recordings',
+    ],
+],
+```
+
+No custom controller methods or `beforeSave()` hooks are required — `CrudController` validates the token, streams the assembled file to `Storage::disk('public')`, cleans up temp chunks, shows the existing file on edit, and deletes old files on replace, remove, or permanent delete.
+
+### Multi-Column & Dynamic Directory Example
+
+When a single upload populates multiple model columns (`*_path`, `*_name`, `*_size`) and uses a dynamic folder:
+
+```php
+'fields' => [
+    [
+        'key'               => 'mac_file',
+        'label'             => 'macOS Installer (.dmg, .zip, .pkg)',
+        'type'              => 'chunked-file',
+        'rules'             => 'nullable',
+        'accept'            => '.dmg,.zip,.pkg',
+        'chunk_size_mb'     => 8,
+        'max_size_mb'       => 500,
+        'max_retries'       => 3,
+        'disk'              => 'public',
+        'directory'         => fn ($model, $data) => 'releases/' . ($data['version'] ?? $model->version ?? 'v1'),
+        'preserve_filename' => true,
+        'delete_old'        => true,
+        'path_column'       => 'mac_file_path',
+        'name_column'       => 'mac_file_name',
+        'size_column'       => 'mac_file_size',
+        'url_column'        => 'mac_url', // Optional model accessor; defaults to Storage::disk($disk)->url($path)
+    ],
+],
+```
+
+### `chunked-file` Field Options Reference
+
+| Key                 | Type                | Default                                    | Description                                                                |
+| ------------------- | ------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| `accept`            | `string\|null`      | `null`                                     | Comma-separated extensions or MIME types (enforced client & server-side)   |
+| `chunk_size_mb`     | `int`               | `config('crud.chunk_upload.chunk_size_mb')`| Size of each uploaded slice in MB                                          |
+| `max_size_mb`       | `int`               | `config('crud.chunk_upload.max_file_size_mb')` | Maximum total file size in MB (enforced client & server-side)         |
+| `max_retries`       | `int`               | `config('crud.chunk_upload.max_retries')`  | Number of retry attempts per slice on transient/5xx errors                 |
+| `endpoint`          | `string\|null`      | Native package route (`/crud/chunk-upload`)| Optional custom upload endpoint override                                   |
+| `disk`              | `string`            | `config('crud.chunk_upload.disk')`         | Target Laravel filesystem disk                                             |
+| `directory`         | `string\|Closure`   | `'uploads'`                                | Destination directory (`fn($model, $data) => ...` supported)               |
+| `filename`          | `Closure\|null`     | `null`                                     | Optional custom filename generator `fn($originalName, $model, $data)`      |
+| `preserve_filename` | `bool`              | `false`                                    | Keep sanitized original filename (`false` adds a unique random suffix)     |
+| `visibility`        | `string\|null`      | `null`                                     | Optional disk visibility (`'public'` or `'private'`)                       |
+| `delete_old`        | `bool`              | `true`                                     | Delete replaced/removed files and delete files on non-`SoftDeletes` destroy|
+| `path_column`       | `string`            | `$field['key']`                            | Model attribute storing the saved file path                                |
+| `name_column`       | `string\|null`      | `null`                                     | Optional model attribute storing the original file name                    |
+| `size_column`       | `string\|null`      | `null`                                     | Optional model attribute storing the file size in bytes                    |
+| `url_column`        | `string\|null`      | `null`                                     | Optional model attribute/accessor used for the edit-mode download link     |
+| `auto_handle`       | `bool`              | `true`                                     | Set to `false` if you want to resolve the token manually in `beforeSave()` |
+
+### Standalone Usage (Custom Pages & Modals)
+
+You can also use `ChunkedFileInput` and `ChunkUploadService` directly outside `ResourceForm`:
+
+```tsx
+import ChunkedFileInput from '@/components/crud/ChunkedFileInput';
+
+<ChunkedFileInput
+    accept=".mp4,.mov,.webm"
+    chunkSizeMB={8}
+    maxSizeMB={500}
+    onChange={(val) => setVideoToken(val && 'token' in val ? val.token : null)}
+    onUploadingChange={setIsUploading}
+/>
+```
+
+```php
+use NagibMahfuj\Crud\Services\ChunkUploadService;
+
+$resolved = app(ChunkUploadService::class)->resolveToken($request->input('video_token'));
+// Returns ['token', 'path', 'meta_path', 'name', 'size', 'mime_type'] or null
+```
+
+### Cleaning Up Stale Chunks
+
+Expired partial slices and unclaimed completed files are pruned automatically on upload completion, and you can also schedule the built-in Artisan command:
+
+```php
+// routes/console.php
+Schedule::command('crud:cleanup-chunks')->hourly();
 ```
 
 ---
 
-## ⚙️ Configuration Reference
+## 📊 Column Configuration
 
-### `config/crud.php`
+Each column in the `columns` array supports:
+
+| Key              | Type       | Description                                                                                       |
+| ---------------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| `key`            | `string`   | Model attribute or dot-notation path (e.g., `category.name`)                                      |
+| `label`          | `string`   | Column header text                                                                                |
+| `sortable`       | `bool`     | Whether the column is sortable                                                                    |
+| `type`           | `string`   | Display type: `text`, `number`, `badge`, `status`, `boolean`, `date`, `datetime`, `image`, `serial` |
+| `className`      | `string`   | Optional Tailwind classes applied to `<th>` and `<td>`                                            |
+| `export_format`  | `callable` | Custom CSV export formatter: `fn($record) => $record->name`                                       |
+| `display_format` | `callable` | Custom display formatter applied server-side before sending to frontend                           |
+
+---
+
+## 📝 Field Configuration
+
+Each field in the `fields` array supports:
+
+| Key                  | Type            | Description                                                            |
+| -------------------- | --------------- | ---------------------------------------------------------------------- |
+| `key`                | `string`        | Form field name / model attribute                                      |
+| `label`              | `string`        | Field label                                                            |
+| `type`               | `string`        | Field type (see below)                                                 |
+| `rules`              | `string\|array` | Validation rules (Laravel syntax; supports `Rule` objects and `{id}`)  |
+| `rules_update`       | `string\|array` | Override validation rules on update                                    |
+| `required`           | `bool`          | Show required indicator in UI                                          |
+| `optional_on_update` | `bool`          | Replace `required` with `sometimes` on update                          |
+| `options`            | `array`         | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]`      |
+| `multiple`           | `bool`          | Enables multi-select combobox for `select` fields                      |
+| `accept`             | `string`        | Accepted MIME types / extensions for `file` and `chunked-file` fields  |
+| `default`            | `mixed`         | Default value on create                                                |
+| `disabled`           | `bool`          | Render input disabled                                                  |
+| `hide_on_create`     | `bool`          | Hide this field on the create form                                     |
+| `hide_on_edit`       | `bool`          | Hide this field on the edit form                                       |
+| `hidden`             | `bool`          | Hide on both forms                                                     |
+| `ignore_on_save`     | `bool`          | Do not assign this attribute in `fillModel()`                          |
+| `placeholder`        | `string`        | Input placeholder or helper text                                       |
+
+### Supported Field Types
+
+`text`, `email`, `password`, `number`, `textarea`, `select`, `date`, `datetime`, `toggle`, `checkbox`, `file`, `chunked-file`, `hidden`, `options-builder`, `repeater`
+
+---
+
+## 🔍 Filter Configuration
+
+Each filter in the `filters` array supports:
+
+| Key           | Type     | Description                                                   |
+| ------------- | -------- | ------------------------------------------------------------- |
+| `key`         | `string` | Filter key (used as URL param: `filter_{key}`)                |
+| `label`       | `string` | Filter label                                                  |
+| `type`        | `string` | `select`, `boolean`, `text`, `date`, `date_range`             |
+| `column`      | `string` | Database column (defaults to `key`)                           |
+| `options`     | `array`  | Options for `select` filters                                  |
+| `multiple`    | `bool`   | Enable multi-select faceted filter for `select` filters       |
+| `relation`    | `string` | Filter via a relationship (`whereHas`)                        |
+| `separator`   | `string` | Custom separator for multi-select URL values                  |
+| `placeholder` | `string` | Optional placeholder for `text` filter                        |
+
+---
+
+## 📤 Action-Driven Import & Export
+
+Both **Export** and **Import** visibility are controlled by the `actions` array in `resourceConfig()` and filtered through your resource policy (`BaseCrudPolicy::export()` and `BaseCrudPolicy::import()`).
+
+### Export
+
+Include `'export'` in `actions`:
+
+```php
+'actions' => ['create', 'edit', 'delete', 'export'],
+```
+
+- When `'export'` is present and the user passes `Policy::export()`, `ResourceIndex` renders the Export button using the auto-resolved `{route_prefix}.export` route.
+- When `'export'` is omitted from `actions`, the Export button is hidden **and** `GET /{resource}/export` returns `403 Forbidden`.
+
+### Import
+
+1. Add an `import(Request $request)` method to your controller:
+
+```php
+public function import(Request $request)
+{
+    $this->authorize('import', \App\Models\Product::class);
+
+    $request->validate(['file' => 'required|file|mimes:csv,xlsx|max:102400']);
+
+    // Your import logic here
+
+    return back()->with('success', 'Import started successfully.');
+}
+```
+
+2. Include `'import'` in `actions` (and optionally set `import_format_url`, `import_accept`, `import_max_size_mb`, or custom `import_route`):
+
+```php
+'actions'            => ['create', 'edit', 'delete', 'export', 'import'],
+'import_format_url'  => '/samples/products.csv',
+'import_accept'      => '.csv,.xlsx',
+'import_max_size_mb' => 50,
+```
+
+`Route::crudResource()` automatically registers `POST {uri}/import`, `CrudService::buildMeta()` resolves `meta.routes.import` (respecting `Policy::import()`), and `ResourceIndex` automatically shows the Import button and upload dialog.
+
+---
+
+## ⚙️ Configuration Reference (`config/crud.php`)
 
 ```php
 return [
-    // Separator for multi-select filters in URL query strings
     'default_separator' => '--',
+    'url_prefix'        => '/dashboard',
+    'max_per_page'      => 100,
 
-    // Override auto-detected role resolver (null = auto-detect)
-    'role_resolver' => null,
-
-    // Resource permission definitions
-    'resources' => [
-        'users' => [
-            'roles'       => ['super_admin', 'admin'],
-            'read_only'   => ['viewer'],         // Resource-level read-only
-            'create_only' => ['data_entry'],      // Can create but not update/delete
+    'breadcrumbs' => [
+        'root' => [
+            'title' => 'Dashboard',
+            'href'  => '/dashboard',
         ],
     ],
 
-    // Global role flags
+    'role_resolver' => null,
+
+    'resources' => [
+        'users' => [
+            'roles'       => ['super_admin', 'admin'],
+            'read_only'   => ['viewer'],
+            'create_only' => ['data_entry'],
+            'no_delete'   => ['admin'],
+        ],
+    ],
+
     'read_only_roles' => ['viewer'],
     'no_delete_roles' => ['manager'],
 
-    // Generator defaults
+    'chunk_upload' => [
+        'enabled'            => true,
+        'route'              => '/crud/chunk-upload',
+        'route_name'         => 'crud.chunk-upload',
+        'middleware'         => ['web', 'auth'],
+        'disk'               => 'public',
+        'temp_directory'     => 'crud-chunks',
+        'chunk_size_mb'      => 5,
+        'max_chunk_size_mb'  => 25,
+        'max_file_size_mb'   => 512,
+        'max_retries'        => 3,
+        'ttl_hours'          => 6,
+        'allowed_extensions' => [],
+    ],
+
     'generator' => [
         'controller_namespace' => 'App\\Http\\Controllers\\Dashboard',
         'policy_namespace'     => 'App\\Policies',
-        'pages_directory'      => 'resources/js/Pages/Dashboard',
+        'pages_directory'      => null, // Auto-detects resources/js/pages vs resources/js/Pages
         'model_path'           => 'app/Models',
     ],
 ];
@@ -404,45 +697,21 @@ return [
 
 ---
 
-## 🔑 Spatie Integration
+## 🔑 Spatie Integration & Custom Role Resolver
 
-The package auto-detects `spatie/laravel-permission`. If installed, it uses `$user->hasRole()` and `$user->getRoleNames()` instead of reading from a `role` column.
+The package auto-detects `spatie/laravel-permission`. If installed, it uses `$user->hasRole()` and `$user->getRoleNames()`; otherwise it falls back to reading a `role` column on the `users` table.
 
-**No configuration needed** — just install Spatie and the package handles the rest:
-
-```bash
-composer require spatie/laravel-permission
-```
-
-> [!NOTE]
-> If you are not using `spatie/laravel-permission` or any other role management package, by default the package will check for a `role` column in the `users` table.
-
-If you don't have a `role` column in the `users` table, please add it to the `users` table following the migration below:
+If you do not use Spatie and need a `role` column:
 
 ```php
-<?php
-
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-
-return new class extends Migration
-{
-    public function up(): void
-    {
-        Schema::create('users', function (Blueprint $table) {
-            //...
-            $table->string('role')->default('viewer');
-            // ...
-        });
-    }
-    //...
-};
+Schema::table('users', function (Blueprint $table) {
+    $table->string('role')->default('viewer');
+});
 ```
 
 ### Custom Role Resolver
 
-If you have a custom role system, implement the `RoleResolver` interface:
+Implement `NagibMahfuj\Crud\Contracts\RoleResolver`:
 
 ```php
 <?php
@@ -466,293 +735,139 @@ class CustomRoleResolver implements RoleResolver
 }
 ```
 
-Register it in your `AppServiceProvider`:
+Register in `config/crud.php`:
 
 ```php
-$this->app->singleton(
-    \NagibMahfuj\Crud\Contracts\RoleResolver::class,
-    \App\Services\CustomRoleResolver::class
-);
-```
-
-Or via config:
-
-```php
-// config/crud.php
 'role_resolver' => \App\Services\CustomRoleResolver::class,
 ```
 
 ---
 
-### Runtime Theme Application
+## ⚡ Inertia Layout, Flash Toasts & Theming
 
-In your project entry (e.g., `app.tsx`), call `applyCustomTheme` in the bottom:
+### 1. Normalized `AppLayout`
 
-```typescript
-import { Toaster } from "@/components/ui/sonner";
-import { createInertiaApp } from "@inertiajs/react";
-import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
-
-createInertiaApp({
-  // ...
-});
-
-// ...
-
-// Apply the custom theme
-applyCustomTheme();
-```
-
----
-
-## ⚡ Inertia v3 Integration
-
-Inertia v3 introduces a structural change. Our components no longer hardcode `<AppLayout>` internal wrappers to avoid layout duplication when using v3's global layouts.
-
-### 1. Persistent Layout Pattern
-
-When generating pages for v3, define the layout as a functional property on your page component:
+`ResourceIndex` and `ResourceForm` never wrap `<AppLayout>` internally, preventing layout duplication in Inertia v2/v3. Wire your `AppLayout` to read normalized `meta.breadcrumbs` as a fallback and display session flash toasts:
 
 ```tsx
-// Index.tsx
-import ResourceIndex from "@/components/crud/ResourceIndex";
-import AppLayout from "@/layouts/app-layout";
+import AppLayoutTemplate from '@/layouts/app/app-sidebar-layout';
+import type { BreadcrumbItem } from '@/types';
+import { usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
+import { toast } from '@/components/ui/sonner';
 
-export default function Index(props: any) {
-  return (
-    <ResourceIndex {...props} title="Users" baseRoute="/dashboard/users" />
-  );
-}
+export default function AppLayout({
+    breadcrumbs,
+    children,
+}: {
+    breadcrumbs?: BreadcrumbItem[];
+    children: React.ReactNode;
+}) {
+    const { flash, meta } = usePage().props as any;
+    const resolvedBreadcrumbs = breadcrumbs ?? meta?.breadcrumbs ?? [];
 
-Index.layout = (page: any) => (
-  <AppLayout breadcrumbs={[{ title: "Users", href: "/dashboard/users" }]}>
-    {page}
-  </AppLayout>
-);
-```
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success, { id: flash.success });
+        }
+        if (flash?.error) {
+            toast.error(flash.error, { id: flash.error });
+        }
+    }, [flash]);
 
-### 2. Toast Integration (Flash Messages)
-
-First of all update `app/Http/Middleware/HandleInertiaRequests.php` to share flash messages:
-
-```php
-<?php
-
-namespace App\Http\Middleware;
-
-use Closure;
-use Illuminate\Http\Request;
-use Inertia\Middleware;
-
-class HandleInertiaRequests extends Middleware
-{
-    //...
-
-    public function share(Request $request): array
-    {
-        return array_merge(parent::share($request), [
-            //...
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'data'    => fn () => $request->session()->get('data'),
-            ],
-        ]);
-    }
-}
-```
-
-Inertia v3 typically moves the `Toaster` to `app.tsx`. Please follow below code:
-
-```tsx
-import { Toaster } from "@/components/ui/sonner";
-import { createInertiaApp } from "@inertiajs/react";
-import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
-
-createInertiaApp({
-  // ...
-  withApp(app) {
-    // ...
     return (
-      <AnyWrapper>
-        {app}
-        {/* Add this line */}
-        <Toaster {...theme.toast} />
-      </AnyWrapper>
+        <AppLayoutTemplate breadcrumbs={resolvedBreadcrumbs}>
+            {children}
+        </AppLayoutTemplate>
     );
-  },
-  // ...
-  progress: {
-    // Add this line
-    color: customThemeColors.primary,
-  },
-  // ...
-});
-
-// ...
-
-// Apply the custom theme
-applyCustomTheme();
+}
 ```
 
-For older Inertia versions, you can use the following code:
+### 2. Share Flash Messages in `HandleInertiaRequests`
+
+```php
+public function share(Request $request): array
+{
+    return array_merge(parent::share($request), [
+        'flash' => [
+            'success' => fn () => $request->session()->get('success'),
+            'error'   => fn () => $request->session()->get('error'),
+            'data'    => fn () => $request->session()->get('data'),
+        ],
+    ]);
+}
+```
+
+### 3. Toaster & Runtime Theme (`app.tsx`)
+
+**Inertia v3:**
 
 ```tsx
-import { Toaster } from "@/components/ui/sonner";
-import { createInertiaApp } from "@inertiajs/react";
-import { applyCustomTheme, theme, customThemeColors } from "@/lib/crud-theme";
+import { Toaster } from '@/components/ui/sonner';
+import { createInertiaApp } from '@inertiajs/react';
+import { applyCustomTheme, theme, customThemeColors } from '@/lib/crud-theme';
 
 createInertiaApp({
-  // ...
-  setup({ el, App, props }) {
-    const root = createRoot(el);
-
-    root.render(
-      <AnyWrapper>
-        {app}
-        {/* Add this line */}
-        <Toaster {...theme.toast} />
-      </AnyWrapper>,
-    );
-  },
-  progress: {
-    // Add this line
-    color: customThemeColors.primary,
-  },
-  // ...
+    // ...
+    withApp(app) {
+        return (
+            <>
+                {app}
+                <Toaster {...theme.toast} />
+            </>
+        );
+    },
+    progress: {
+        color: customThemeColors.primary,
+    },
 });
 
-// ...
-
-// Apply the custom theme
 applyCustomTheme();
 ```
 
-To trigger toasts from Laravel session flash messages, add this listener to your `AppLayout`:
+**Inertia v1 / v2:**
 
 ```tsx
-import { usePage } from "@inertiajs/react";
-import { useEffect } from "react";
-import { toast } from "@/components/ui/sonner";
+import { Toaster } from '@/components/ui/sonner';
+import { createInertiaApp } from '@inertiajs/react';
+import { createRoot } from 'react-dom/client';
+import { applyCustomTheme, theme, customThemeColors } from '@/lib/crud-theme';
 
-export default function AppLayout({ children }) {
-  const { flash } = usePage().props as any;
+createInertiaApp({
+    // ...
+    setup({ el, App, props }) {
+        createRoot(el).render(
+            <>
+                <App {...props} />
+                <Toaster {...theme.toast} />
+            </>,
+        );
+    },
+    progress: {
+        color: customThemeColors.primary,
+    },
+});
 
-  useEffect(() => {
-    if (flash?.success) {
-      toast.success(flash.success, { id: flash.success });
-    }
-    if (flash?.error) {
-      toast.error(flash.error, { id: flash.error });
-    }
-  }, [flash]);
-
-  return <>{children}</>;
-}
+applyCustomTheme();
 ```
-
----
-
-## 📊 Column Configuration
-
-Each column in the `columns` array supports:
-
-| Key              | Type       | Description                                                               |
-| ---------------- | ---------- | ------------------------------------------------------------------------- |
-| `key`            | `string`   | Model attribute or dot-notation path (e.g., `category.name`)              |
-| `label`          | `string`   | Column header text                                                        |
-| `sortable`       | `bool`     | Whether the column is sortable                                            |
-| `type`           | `string`   | Display type: `text`, `number`, `badge`, `datetime`, `boolean`            |
-| `export_format`  | `callable` | Custom CSV export formatter: `fn($record) => $record->name`               |
-| `display_format` | `callable` | Custom display formatter (applied server-side before sending to frontend) |
-
----
-
-## 📝 Field Configuration
-
-Each field in the `fields` array supports:
-
-| Key                  | Type            | Description                                                       |
-| -------------------- | --------------- | ----------------------------------------------------------------- |
-| `key`                | `string`        | Form field name / model attribute                                 |
-| `label`              | `string`        | Field label                                                       |
-| `type`               | `string`        | Field type (see below)                                            |
-| `rules`              | `string\|array` | Validation rules (Laravel syntax)                                 |
-| `rules_update`       | `string\|array` | Override rules for update action                                  |
-| `required`           | `bool`          | Show required indicator in UI                                     |
-| `optional_on_update` | `bool`          | Replace `required` with `sometimes` on update                     |
-| `options`            | `array`         | Options for `select` fields: `[['label' => 'X', 'value' => 'y']]` |
-| `multiple`           | `bool`          | Enables multi-select combobox for `select` fields                 |
-| `hide_on_create`     | `bool`          | Hide this field on the create form                                |
-| `hide_on_edit`       | `bool`          | Hide this field on the edit form                                  |
-| `hidden`             | `bool`          | Hide on both forms                                                |
-| `ignore_on_save`     | `bool`          | Don't set this attribute when saving the model                    |
-| `placeholder`        | `string`        | Input placeholder text                                            |
-
-### Supported Field Types
-
-`text`, `email`, `password`, `number`, `textarea`, `select`, `date`, `datetime`, `toggle`, `file`, `hidden`, `options-builder`, `repeater`
-
----
-
-## 🔍 Filter Configuration
-
-Each filter in the `filters` array supports:
-
-| Key         | Type     | Description                                    |
-| ----------- | -------- | ---------------------------------------------- |
-| `key`       | `string` | Filter key (used as URL param: `filter_{key}`) |
-| `label`     | `string` | Filter label                                   |
-| `type`      | `string` | `select`, `boolean`, `date`, `date_range`      |
-| `column`    | `string` | Database column (defaults to `key`)            |
-| `options`   | `array`  | Options for select filters                     |
-| `multi`     | `bool`   | Allow multi-select                             |
-| `relation`  | `string` | Filter via a relationship                      |
-| `separator` | `string` | Custom separator for multi-select URL values   |
-
----
-
-## 📤 Import / Export
-
-### Export
-
-Export is built-in. Any controller extending `CrudController` automatically gets a `GET /export` route that streams a CSV with all current filters applied.
-
-### Import
-
-Add an `import()` method to your controller:
-
-```php
-public function import(Request $request)
-{
-    $this->authorize('import', new \App\Models\Product);
-
-    $request->validate(['file' => 'required|file|mimes:csv,xlsx|max:102400']);
-
-    // Your import logic here (e.g., using Laravel Excel or custom CSV parsing)
-
-    return back()->with('success', 'Import started successfully.');
-}
-```
-
-Then set the `import_route` in your config:
-
-```php
-'import_route' => '/dashboard/products/import',
-```
-
-The frontend will automatically show an import button and upload modal.
 
 ---
 
 ## 🔧 Customization
 
-### Override Controller Hooks
+### Controller Hooks & Base Query
 
 ```php
+protected function baseQuery()
+{
+    return \App\Models\Product::query()
+        ->with(['category', 'tags'])
+        ->where('company_id', auth()->user()->company_id);
+}
+
 protected function beforeSave($model, array $data, string $action): void
 {
-    if (isset($data['password'])) {
+    if (!empty($data['password'])) {
         $model->password = bcrypt($data['password']);
     }
 }
@@ -765,125 +880,73 @@ protected function afterSave($model, array $data, string $action): void
 }
 ```
 
-### Override Base Query
-
-```php
-protected function baseQuery()
-{
-    return \App\Models\Product::query()
-        ->with(['category', 'tags'])
-        ->where('company_id', auth()->user()->company_id);
-}
-```
-
-### Override Create/Edit for Dynamic Options
-
-```php
-public function create()
-{
-    $response = parent::create();
-
-    // Inject category options into the Inertia response
-    $response->with('categories', \App\Models\Category::pluck('name', 'id'));
-
-    return $response;
-}
-```
-
 ### Publish & Customize Stubs
 
 ```bash
 php artisan vendor:publish --tag=crud-stubs
 ```
 
-Stubs are saved to `stubs/crud/` and will be used instead of the package defaults.
+Stubs are saved to `stubs/crud/` and take precedence over package defaults.
 
 ---
 
 ## 🧭 Dynamic Navigation
 
-The package provides a `NavBuilder` support class and a `useNavGroups` React hook to easily build a sidebar that updates dynamically based on user permissions (policies).
-
-### 1. Build Navigation (Backend)
-
-In your `HandleInertiaRequests.php` middleware, use the `NavBuilder` to filter your navigation structure:
+Use `NavBuilder::filter()` in `HandleInertiaRequests`:
 
 ```php
 use NagibMahfuj\Crud\Support\NavBuilder;
 use App\Models\User;
 use App\Models\Product;
 
-public function share(Request $request): array
-{
-    return array_merge(parent::share($request), [
-        'navGroups' => fn () => NavBuilder::filter([
-            [
-                'title' => 'General',
-                'items' => [
-                    ['title' => 'Dashboard', 'href' => '/dashboard', 'icon' => 'LayoutGrid'],
-                ],
-            ],
-            [
-                'title' => 'Management',
-                'items' => [
-                    // Item will only be visible if Gate::allows('viewAny', new User())
-                    ['title' => 'Users', 'href' => '/dashboard/users', 'icon' => 'Users', 'permission' => User::class],
-                    ['title' => 'Products', 'href' => '/dashboard/products', 'icon' => 'Package', 'permission' => Product::class],
-                ],
-            ],
-        ], $request->user()),
-    ]);
-}
+'navGroups' => fn () => NavBuilder::filter([
+    [
+        'title' => 'General',
+        'items' => [
+            ['title' => 'Dashboard', 'href' => '/dashboard', 'icon' => 'LayoutGrid'],
+        ],
+    ],
+    [
+        'title' => 'Management',
+        'items' => [
+            ['title' => 'Users', 'href' => '/dashboard/users', 'icon' => 'Users', 'permission' => User::class],
+            ['title' => 'Products', 'href' => '/dashboard/products', 'icon' => 'Package', 'permission' => Product::class],
+        ],
+    ],
+], $request->user()),
 ```
 
-### 2. Publish the Hook (Frontend)
-
-```bash
-php artisan vendor:publish --tag=crud-assets
-```
-
-This will publish `resources/js/hooks/use-nav-items.ts` to your project.
-
-### 3. Use in Sidebar
-
-In your `Sidebar` component (e.g., `app-sidebar.tsx`), use the hook to render the groups:
+Consume in your sidebar with `useNavGroups()`:
 
 ```tsx
-import { useNavGroups } from "@/hooks/use-nav-items";
-import { NavMain } from "@/components/nav-main";
+import { useNavGroups } from '@/hooks/use-nav-items';
+import { NavMain } from '@/components/nav-main';
 
 export function AppSidebar() {
-  const navGroups = useNavGroups();
+    const navGroups = useNavGroups();
 
-  return (
-    <SidebarContent>
-      {navGroups.map((group) => (
-        <NavMain key={group.title} title={group.title} items={group.items} />
-      ))}
-    </SidebarContent>
-  );
+    return (
+        <SidebarContent>
+            {navGroups.map((group) => (
+                <NavMain key={group.title} title={group.title} items={group.items} />
+            ))}
+        </SidebarContent>
+    );
 }
 ```
 
 ---
 
-## 🔄 Migration Guide (From Inline to Package)
+## 🔄 Upgrading from v1.x to v2.0
 
-If you're migrating from the inline `CrudController`/`CrudService` to this package:
-
-1. Install the package: `composer require nagibmahfuj/laravel-inertia-crud`
-2. Update your controllers: change `use App\Http\Controllers\Dashboard\CrudController` → `use NagibMahfuj\Crud\CrudController`
-3. Update your policies: change `use App\Policies\BaseCrudPolicy` → `use NagibMahfuj\Crud\BaseCrudPolicy` and type-hint `Authenticatable` instead of `User`
-4. Rename your config from `config/crud_permissions.php` → `config/crud.php` (update keys accordingly)
-5. Update `AppServiceProvider`: remove the manual `RoleResolver` binding and `Route::crudResource` macro (the package handles both)
-6. Publish and use the CRUD frontend components from `@/components/crud/` instead of `@/components/dashboard/`
+See the full **[UPGRADE.md](UPGRADE.md)** guide for every breaking change, before/after code diffs, and migration steps (including action-driven export/import, normalized `Index.tsx`/`Form.tsx`/`AppLayout`, and migrating manual chunk upload routes/controllers to the native `chunked-file` field).
 
 ---
 
 ## 🧪 Testing
 
 ```bash
-# From the package directory
+composer install
 composer test
 ```
 
@@ -891,57 +954,11 @@ composer test
 
 ## 🤝 Contributing
 
-Thank you for considering contributing to the `laravel-inertia-crud` package! We welcome all contributions, including bug reports, feature requests, and pull requests.
-
-### How to Contribute
-
-1. **Fork the Repository**
-   Fork the project to your own GitHub account and clone it to your local machine.
-2. **Set Up a Local Environment**
-   Link the package to a local Laravel application for testing:
-
-   ```json
-   // In your Laravel app's composer.json:
-   "minimum-stability": "dev",
-   "repositories": [
-       {
-           "type": "path",
-           "url": "../path-to-your-fork/laravel-inertia-crud"
-       }
-   ],
-   "require": {
-       "nagibmahfuj/laravel-inertia-crud": "@dev"
-   }
-   ```
-
-   Then run `composer update nagibmahfuj/laravel-inertia-crud` in your Laravel application.
-
-3. **Create a Branch**
-   Create a new branch for your feature or bug fix:
-
-   ```bash
-   git checkout -b feature/my-awesome-feature
-   ```
-
-4. **Make Your Changes**
-   - Write clear, understandable code.
-   - If adding new React components, ensure they are designed as publishable stubs that use `shadcn/ui`.
-   - Update the `README.md` if you introduce new configuration options or commands.
-
-5. **Run Tests**
-   Ensure your changes don't break existing functionality.
-
-   ```bash
-   composer test
-   ```
-
-6. **Submit a Pull Request**
-   Push your branch to GitHub and submit a PR against the `main` branch. Provide a clear description of what the PR accomplishes.
-
-### Code Style
-
-- Follow **PSR-12** coding standards for PHP.
-- For frontend scaffolding, follow standardized **TypeScript/React** patterns and ensure Tailwind CSS compatibility.
+1. Fork the repository and create a feature branch (`git checkout -b feature/my-feature`).
+2. Link locally via a Composer `path` repository to test in a Laravel app.
+3. Run `composer test` and ensure all tests pass.
+4. Update `README.md` / `UPGRADE.md` for any new options or breaking changes.
+5. Submit a Pull Request against `main`.
 
 ---
 
@@ -953,10 +970,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## 👤 Author
 
-**Nagib Mahfuj**
-
-- GitHub: [@nagibmahfuj](https://github.com/nagibmahfuj)
-
----
+**Nagib Mahfuj** — GitHub: [@nagibmahfuj](https://github.com/nagibmahfuj)
 
 Made with ❤️ for the Laravel community.

@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -16,29 +15,31 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { router } from '@inertiajs/react';
+import { get } from 'lodash';
 import {
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
-    Search,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { get } from 'lodash';
 
 /**
- * Safely get a nested value from an object using a dot-notated path.
+ * Safely get a value from an object, checking direct property first
+ * (for server-formatted dot-notated keys) then dot-notated path.
  */
 function getNestedValue(obj: any, path: string): any {
+    if (obj && Object.prototype.hasOwnProperty.call(obj, path)) {
+        return obj[path];
+    }
     return get(obj, path);
 }
-
 
 interface DataTableProps<T> {
     data: T[];
     columns: {
         header: React.ReactNode;
-        accessorKey?: keyof T;
+        accessorKey?: keyof T | string;
         cell?: (item: T, index: number) => React.ReactNode;
         className?: string;
     }[];
@@ -49,6 +50,10 @@ interface DataTableProps<T> {
         total: number;
         from: number;
         to: number;
+        first_page_url?: string | null;
+        last_page_url?: string | null;
+        prev_page_url?: string | null;
+        next_page_url?: string | null;
         links: {
             url: string | null;
             label: string;
@@ -57,10 +62,10 @@ interface DataTableProps<T> {
     };
     onSearch?: (query: string) => void;
     onPerPageChange?: (perPage: string) => void;
-    onPageChange?: (page: number) => void; // Optional if handling via links directly
-    filters?: React.ReactNode; // Extra filters
-    initialSearch?: string; // Initial search value
-    defaultPerPage?: number; // Default per page count
+    onPageChange?: (page: number) => void;
+    filters?: React.ReactNode;
+    initialSearch?: string;
+    defaultPerPage?: number;
 }
 
 export function DataTable<T>({
@@ -69,9 +74,7 @@ export function DataTable<T>({
     pagination,
     onSearch,
     onPerPageChange,
-    onPageChange,
     filters,
-    defaultPerPage = 10,
     initialSearch = '',
 }: DataTableProps<T>) {
     const [search, setSearch] = useState(initialSearch);
@@ -80,8 +83,7 @@ export function DataTable<T>({
     useEffect(() => {
         setSearch(initialSearch);
     }, [initialSearch]);
-    
-    // Simple debounce implementation if hook not found
+
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
@@ -95,25 +97,49 @@ export function DataTable<T>({
         return () => clearTimeout(timer);
     }, [search, onSearch, initialSearch]);
 
-    const handlePageChange = (url: string | null) => {
+    const handlePageChange = (url: string | null | undefined) => {
         if (!url) return;
-        // Extract page number or just visit the URL
         router.visit(url, {
             preserveState: true,
             preserveScroll: true,
         });
     };
 
-    const isFiltered = search.length > 0 || pagination.per_page !== defaultPerPage;
+    // Resolve first, prev, next, and last URLs cleanly
+    const firstPageUrl =
+        pagination.first_page_url ??
+        pagination.links.find((l) => l.label.trim() === '1')?.url ??
+        pagination.links[1]?.url ??
+        null;
+
+    const prevPageUrl =
+        pagination.prev_page_url ??
+        pagination.links.find((l) => l.label.includes('Previous'))?.url ??
+        null;
+
+    const nextPageUrl =
+        pagination.next_page_url ??
+        pagination.links.find((l) => l.label.includes('Next'))?.url ??
+        null;
+
+    const lastPageUrl =
+        pagination.last_page_url ??
+        pagination.links.find(
+            (l) => l.label.trim() === String(pagination.last_page),
+        )?.url ??
+        (pagination.links.length >= 2
+            ? pagination.links[pagination.links.length - 2]?.url
+            : null) ??
+        null;
 
     return (
-        <div className="max-sm:has-[div[role='toolbar']]:mb-16 flex flex-1 flex-col gap-4">
+        <div className="flex flex-1 flex-col gap-4 max-sm:has-[div[role='toolbar']]:mb-16">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-1 items-center gap-2">
-                    {filters}
-                </div>
+                <div className="flex flex-1 items-center gap-2">{filters}</div>
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Rows per page</span>
+                    <span className="text-muted-foreground text-sm">
+                        Rows per page
+                    </span>
                     <Select
                         value={String(pagination.per_page)}
                         onValueChange={(value) => {
@@ -123,7 +149,10 @@ export function DataTable<T>({
                                 router.get(
                                     window.location.pathname,
                                     { per_page: value },
-                                    { preserveState: true, preserveScroll: true }
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
                                 );
                             }
                         }}
@@ -146,7 +175,10 @@ export function DataTable<T>({
                     <TableHeader>
                         <TableRow>
                             {columns.map((column, index) => (
-                                <TableHead key={index} className={column.className}>
+                                <TableHead
+                                    key={index}
+                                    className={column.className}
+                                >
                                     {column.header}
                                 </TableHead>
                             ))}
@@ -157,13 +189,18 @@ export function DataTable<T>({
                             data.map((item, rowIndex) => (
                                 <TableRow key={rowIndex}>
                                     {columns.map((column, colIndex) => (
-                                        <TableCell key={colIndex} className={column.className}>
+                                        <TableCell
+                                            key={colIndex}
+                                            className={column.className}
+                                        >
                                             {column.cell
                                                 ? column.cell(item, rowIndex)
                                                 : column.accessorKey
-                                                ? (getNestedValue(item, column.accessorKey as string) as React.ReactNode)
-                                                : null}
-
+                                                  ? (getNestedValue(
+                                                        item,
+                                                        column.accessorKey as string,
+                                                    ) as React.ReactNode)
+                                                  : null}
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -182,56 +219,62 @@ export function DataTable<T>({
                 </Table>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between overflow-clip px-2 @max-2xl/content:flex-col-reverse @max-2xl/content:gap-4 gap-2 mt-auto">
-                <div className="text-sm text-muted-foreground">
-                    Showing {pagination.from} to {pagination.to} of {pagination.total} entries
+            <div className="mt-auto flex flex-col items-center justify-between gap-2 overflow-clip px-2 sm:flex-row @max-2xl/content:flex-col-reverse @max-2xl/content:gap-4">
+                <div className="text-muted-foreground text-sm">
+                    Showing {pagination.from} to {pagination.to} of{' '}
+                    {pagination.total} entries
                 </div>
-                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 lg:gap-8">
-                     {/* We can use the links provided by Laravel directly or build custom buttons */}
-                    <div className="flex w-max items-center justify-center text-sm font-medium @max-3xl/content:hidden text-muted-foreground">
+                <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-6 lg:gap-8">
+                    <div className="text-muted-foreground flex w-max items-center justify-center text-sm font-medium @max-3xl/content:hidden">
                         Page {pagination.current_page} of {pagination.last_page}
                     </div>
                     <div className="flex items-center space-x-2">
-                        {pagination.links.map((link, i) => {
-                            // Render simplified controls: First, Prev, Next, Last
-                            // Or just render all links? rendering all links can be messy if too many.
-                            // Let's stick to simple Prev/Next for now using the links array to find prev/next urls
-                             return null;
-                        })}
-                        
                         <Button
+                            type="button"
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => handlePageChange(pagination.links[0]?.url)}
-                            disabled={!pagination.links[0]?.url || pagination.current_page === 1}
+                            onClick={() => handlePageChange(firstPageUrl)}
+                            disabled={
+                                !firstPageUrl || pagination.current_page <= 1
+                            }
                         >
                             <span className="sr-only">Go to first page</span>
                             <ChevronsLeft className="h-4 w-4" />
                         </Button>
                         <Button
+                            type="button"
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => handlePageChange(pagination.links.find(l => l.label.includes('Previous'))?.url ?? null)}
-                             disabled={pagination.current_page === 1}
-
+                            onClick={() => handlePageChange(prevPageUrl)}
+                            disabled={
+                                !prevPageUrl || pagination.current_page <= 1
+                            }
                         >
                             <span className="sr-only">Go to previous page</span>
                             <ChevronLeft className="h-4 w-4" />
                         </Button>
                         <Button
+                            type="button"
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => handlePageChange(pagination.links.find(l => l.label.includes('Next'))?.url ?? null)}
-                            disabled={pagination.current_page === pagination.last_page}
+                            onClick={() => handlePageChange(nextPageUrl)}
+                            disabled={
+                                !nextPageUrl ||
+                                pagination.current_page >= pagination.last_page
+                            }
                         >
                             <span className="sr-only">Go to next page</span>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                         <Button
+                            type="button"
                             variant="outline"
                             className="h-8 w-8 p-0"
-                            onClick={() => handlePageChange(pagination.links[pagination.links.length - 1]?.url)}
-                            disabled={pagination.current_page === pagination.last_page}
+                            onClick={() => handlePageChange(lastPageUrl)}
+                            disabled={
+                                !lastPageUrl ||
+                                pagination.current_page >= pagination.last_page
+                            }
                         >
                             <span className="sr-only">Go to last page</span>
                             <ChevronsRight className="h-4 w-4" />

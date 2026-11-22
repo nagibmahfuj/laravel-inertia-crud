@@ -1,24 +1,15 @@
-import { Head, useForm } from '@inertiajs/react';
+import React, { useCallback, useState } from 'react';
+import { Head, router, useForm } from '@inertiajs/react';
 
-import { FormField, type FieldConfig } from '@/components/crud/FormField';
+import {
+    FormField,
+    formatDateInput,
+    formatDateTimeLocal,
+} from '@/components/crud/FormField';
+import type { ResourceFormProps } from '@/components/crud/types';
 import { Button } from '@/components/ui/button';
-import type { BreadcrumbItem } from '@/types';
 
-interface ResourceFormProps {
-    meta: {
-        resource_name: string;
-    };
-    fields: FieldConfig[];
-    record?: Record<string, any>;
-    mode: 'create' | 'edit';
-    // Customization
-    title?: string;
-    breadcrumbs?: BreadcrumbItem[];
-    submitRoute?: string;
-    indexRoute?: string;
-    // Extra form fields not in config
-    children?: React.ReactNode;
-}
+export type { ResourceFormProps };
 
 export default function ResourceForm({
     meta,
@@ -26,20 +17,45 @@ export default function ResourceForm({
     record,
     mode,
     title,
-    breadcrumbs,
     submitRoute,
     indexRoute,
     children,
 }: ResourceFormProps) {
     const resourceName = meta.resource_name ?? 'Record';
     const pageTitle =
-        title ?? `${mode === 'create' ? 'Create' : 'Edit'} ${resourceName}`;
+        title ??
+        meta.title ??
+        `${mode === 'create' ? 'Create' : 'Edit'} ${resourceName}`;
+
+    const effectiveIndexRoute =
+        indexRoute ?? meta.routes?.index ?? meta.base_route;
+    const effectiveSubmitRoute =
+        submitRoute ??
+        (mode === 'edit'
+            ? (meta.routes?.update ??
+              (effectiveIndexRoute && record?.id !== undefined
+                  ? `${effectiveIndexRoute}/${record.id}`
+                  : undefined))
+            : (meta.routes?.store ?? effectiveIndexRoute));
 
     // Build initial form data from fields + record
     const initialData: Record<string, any> = {};
     for (const field of fields) {
         if (field.type === 'repeater') {
             initialData[field.key] = record?.[field.key] ?? field.default ?? [];
+        } else if (field.type === 'datetime') {
+            const rawVal = record?.[field.key] ?? field.default ?? '';
+            initialData[field.key] = formatDateTimeLocal(rawVal);
+        } else if (field.type === 'date') {
+            const rawVal = record?.[field.key] ?? field.default ?? '';
+            initialData[field.key] = formatDateInput(rawVal);
+        } else if (field.type === 'checkbox' || field.type === 'toggle') {
+            const rawVal = record?.[field.key] ?? field.default ?? false;
+            initialData[field.key] = Boolean(
+                rawVal && rawVal !== '0' && rawVal !== 'false',
+            );
+        } else if (field.type === 'chunked-file') {
+            initialData[field.key] = null;
         } else {
             initialData[field.key] = record?.[field.key] ?? field.default ?? '';
         }
@@ -48,25 +64,50 @@ export default function ResourceForm({
     const { data, setData, post, put, processing, errors, transform } =
         useForm(initialData);
 
+    // Track concurrent chunked uploads by field key
+    const [uploadingFields, setUploadingFields] = useState<Set<string>>(
+        () => new Set(),
+    );
+    const isUploading = uploadingFields.size > 0;
+
+    const handleUploadingChange = useCallback(
+        (fieldKey: string, uploading: boolean) => {
+            setUploadingFields((prev) => {
+                const next = new Set(prev);
+                if (uploading) {
+                    next.add(fieldKey);
+                } else {
+                    next.delete(fieldKey);
+                }
+                return next;
+            });
+        },
+        [],
+    );
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isUploading || !effectiveSubmitRoute) {
+            return;
+        }
 
         const hasFiles = Object.values(data).some(
             (v) => v instanceof File || v instanceof Blob,
         );
 
-        if (mode === 'create' && submitRoute) {
-            post(submitRoute);
-        } else if (mode === 'edit' && submitRoute) {
+        if (mode === 'create') {
+            post(effectiveSubmitRoute);
+        } else if (mode === 'edit') {
             if (hasFiles) {
-                // Laravel requires POST method with _method=put for multipart file uploads
+                // Laravel requires POST with _method=put for multipart file uploads
                 transform((currentData) => ({
                     ...currentData,
                     _method: 'put',
                 }));
-                post(submitRoute);
+                post(effectiveSubmitRoute);
             } else {
-                put(submitRoute);
+                put(effectiveSubmitRoute);
             }
         }
     };
@@ -75,10 +116,13 @@ export default function ResourceForm({
         setData(key as any, value);
     };
 
-    const defaultBreadcrumbs: BreadcrumbItem[] = breadcrumbs ?? [
-        { title: resourceName, href: indexRoute ?? '' },
-        { title: mode === 'create' ? 'Create' : 'Edit', href: '' },
-    ];
+    const handleCancel = () => {
+        if (effectiveIndexRoute) {
+            router.visit(effectiveIndexRoute);
+        } else {
+            window.history.back();
+        }
+    };
 
     return (
         <>
@@ -104,30 +148,48 @@ export default function ResourceForm({
                                         errors={errors}
                                         allValues={data}
                                         onChange={handleFieldChange}
+                                        onUploadingChange={
+                                            handleUploadingChange
+                                        }
                                     />
                                 ))}
 
                                 {children}
 
-                                <div className="flex justify-end gap-3">
-                                    {indexRoute && (
+                                <div className="flex flex-col justify-between gap-3 pt-2 sm:flex-row sm:items-center">
+                                    {isUploading ? (
+                                        <p className="flex animate-pulse items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                            <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                                            File upload in progress. Please wait
+                                            for upload to complete before
+                                            saving.
+                                        </p>
+                                    ) : (
+                                        <div />
+                                    )}
+
+                                    <div className="flex justify-end gap-3">
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() =>
-                                                window.history.back()
-                                            }
+                                            disabled={isUploading}
+                                            onClick={handleCancel}
                                         >
                                             Cancel
                                         </Button>
-                                    )}
-                                    <Button type="submit" disabled={processing}>
-                                        {processing
-                                            ? 'Saving...'
-                                            : mode === 'create'
-                                              ? `Create ${resourceName}`
-                                              : `Update ${resourceName}`}
-                                    </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing || isUploading}
+                                        >
+                                            {isUploading
+                                                ? 'Uploading...'
+                                                : processing
+                                                  ? 'Saving...'
+                                                  : mode === 'create'
+                                                    ? `Create ${resourceName}`
+                                                    : `Update ${resourceName}`}
+                                        </Button>
+                                    </div>
                                 </div>
                             </form>
                         </div>

@@ -2,7 +2,6 @@
 
 namespace NagibMahfuj\Crud\Support;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class NavBuilder
@@ -32,7 +31,7 @@ class NavBuilder
             ->map(function ($item) use ($user) {
                 if (isset($item['items'])) {
                     $item['items'] = self::filterItems($item['items'], $user);
-                    
+
                     // If all children are filtered out, discard the parent if it has no direct href
                     if (count($item['items']) === 0 && !isset($item['href'])) {
                         return null;
@@ -50,19 +49,20 @@ class NavBuilder
      */
     protected static function canAccess($user, array $item): bool
     {
-        // No permission check required for this item
         if (!isset($item['permission'])) {
             return true;
         }
 
-        $permission = $item['permission'];
-
-        // If permission is a class name, check viewAny on that model
-        if (is_string($permission) && class_exists($permission)) {
-            return Gate::forUser($user)->allows('viewAny', new $permission());
+        if (!$user) {
+            return false;
         }
 
-        // Otherwise, treat as a string-based ability
+        $permission = $item['permission'];
+
+        if (is_string($permission) && class_exists($permission)) {
+            return Gate::forUser($user)->allows('viewAny', $permission);
+        }
+
         return Gate::forUser($user)->allows($permission);
     }
 }

@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { Check, PlusCircle, Search, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { PlusCircle, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

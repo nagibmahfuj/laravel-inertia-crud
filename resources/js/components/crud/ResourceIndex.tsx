@@ -1,13 +1,18 @@
 import { BulkActions } from '@/components/crud/BulkActions';
 import { ConfirmDialog } from '@/components/crud/ConfirmDialog';
+import { DataTable } from '@/components/crud/DataTable';
 import { ExportButton } from '@/components/crud/ExportButton';
 import { FileImport } from '@/components/crud/FileImport';
-import { FilterBar, type FilterConfig } from '@/components/crud/FilterBar';
+import { FilterBar } from '@/components/crud/FilterBar';
 import { PageHeader } from '@/components/crud/PageHeader';
 import { StatusBadge } from '@/components/crud/StatusBadge';
+import type {
+    ColumnConfig,
+    ResourceIndexProps,
+    ResourceMeta,
+} from '@/components/crud/types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DataTable } from '@/components/crud/DataTable';
 import {
     Dialog,
     DialogContent,
@@ -21,9 +26,8 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/react';
+import { get } from 'lodash';
 import {
     ArrowDown,
     ArrowUp,
@@ -34,75 +38,90 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { get } from 'lodash';
 
-export interface ColumnConfig {
-    key: string;
-    label: string;
-    sortable?: boolean;
-    type?: 'text' | 'datetime' | 'boolean' | 'status' | 'number' | 'image' | 'serial';
+export type { ColumnConfig, ResourceIndexProps, ResourceMeta };
 
-    className?: string;
+/**
+ * Prefer direct property lookup (supports server-formatted dot-notated keys
+ * from `display_format`) before falling back to nested dot traversal.
+ */
+function resolveCellValue(item: any, key: string): any {
+    if (item && Object.prototype.hasOwnProperty.call(item, key)) {
+        return item[key];
+    }
+    return get(item, key);
 }
 
-interface ResourceMeta {
-    columns: ColumnConfig[];
-    filters: FilterConfig[];
-    actions: string[];
-    row_selection: boolean;
-    per_page: number;
-    resource_name: string;
-}
+const ROW_ACTIONS = ['show', 'edit', 'delete'] as const;
 
-interface ResourceIndexProps {
-    data: {
-        data: any[];
-        current_page: number;
-        last_page: number;
-        per_page: number;
-        total: number;
-        from: number;
-        to: number;
-        links: { url: string | null; label: string; active: boolean }[];
-    };
-    meta: ResourceMeta;
-    filters: Record<string, string>;
-    // Customization props
-    title?: string;
-    breadcrumbs?: BreadcrumbItem[];
-    baseRoute?: string;
-    exportRoute?: string;
-    importRoute?: string;
-    importFormatUrl?: string;
-    // Custom cell renderers
-    cellOverrides?: Record<
-        string,
-        (item: any, index: number) => React.ReactNode
-    >;
-    // Extra actions per row
-    rowActions?: (item: any) => React.ReactNode;
-    // Custom header actions
-    headerActions?: React.ReactNode;
-}
-
-export default function ResourceIndex({
+export default function ResourceIndex<T extends Record<string, any> = any>({
     data,
     meta,
     filters: currentFilters,
     title,
-    breadcrumbs,
+    description,
     baseRoute,
     exportRoute,
     importRoute,
     importFormatUrl,
+    importAccept,
+    importMaxSizeMB,
     cellOverrides,
     rowActions,
     headerActions,
-}: ResourceIndexProps) {
-    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+}: ResourceIndexProps<T>) {
+    const [selectedIds, setSelectedIds] = useState<Set<string | number>>(
+        new Set(),
+    );
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const resourceName = title ?? meta.resource_name ?? 'Records';
+
+    // ── Normalized defaults from meta (overridable via props) ─
+    const actions = meta.actions ?? [];
+    const resourceName =
+        title ??
+        meta.title ??
+        meta.resource_plural ??
+        meta.resource_name ??
+        'Records';
+    const pageDescription = description ?? meta.description ?? undefined;
+    const effectiveBaseRoute =
+        baseRoute ?? meta.routes?.index ?? meta.base_route;
+
+    const canCreate = actions.includes('create');
+    const canShow = actions.includes('show');
+    const canEdit = actions.includes('edit');
+    const canDelete = actions.includes('delete');
+    const canExport = actions.includes('export');
+    const canImport = actions.includes('import');
+
+    const effectiveCreateRoute =
+        meta.routes?.create ??
+        (effectiveBaseRoute ? `${effectiveBaseRoute}/create` : undefined);
+
+    const effectiveExportRoute = canExport
+        ? (exportRoute ??
+          meta.routes?.export ??
+          (effectiveBaseRoute ? `${effectiveBaseRoute}/export` : undefined))
+        : undefined;
+
+    const effectiveImportRoute = canImport
+        ? (importRoute ??
+          meta.routes?.import ??
+          meta.import_route ??
+          (effectiveBaseRoute ? `${effectiveBaseRoute}/import` : undefined))
+        : undefined;
+
+    const effectiveBulkDestroyRoute =
+        meta.routes?.bulk_destroy ??
+        (effectiveBaseRoute ? `${effectiveBaseRoute}/bulk-destroy` : undefined);
+
+    const effectiveImportFormatUrl =
+        importFormatUrl ?? meta.import_format_url ?? undefined;
+    const effectiveImportAccept =
+        importAccept ?? meta.import_accept ?? '.csv,.xlsx,.xls';
+    const effectiveImportMaxSizeMB =
+        importMaxSizeMB ?? meta.import_max_size_mb ?? 100;
 
     // ── Navigation helpers ────────────────────────────────────
 
@@ -110,7 +129,6 @@ export default function ResourceIndex({
         (params: Record<string, string>) => {
             const next = { ...currentFilters, ...params };
 
-            // Clean up empty values and default page
             Object.keys(next).forEach((key) => {
                 if (
                     next[key] === '' ||
@@ -134,35 +152,47 @@ export default function ResourceIndex({
         [currentFilters],
     );
 
-    const handleSearch = (query: string) => {
-        navigateWithFilters({ search: query, page: '1' });
-    };
+    const handleSearch = useCallback(
+        (query: string) => {
+            navigateWithFilters({ search: query, page: '1' });
+        },
+        [navigateWithFilters],
+    );
 
-    const handlePerPageChange = (perPage: string) => {
-        navigateWithFilters({ per_page: perPage, page: '1' });
-    };
+    const handlePerPageChange = useCallback(
+        (perPage: string) => {
+            navigateWithFilters({ per_page: perPage, page: '1' });
+        },
+        [navigateWithFilters],
+    );
 
-    const handleFilterChange = (key: string, value: string) => {
-        const val = value === 'all' ? '' : value;
-        navigateWithFilters({ [key]: val, page: '1' });
-    };
+    const handleFilterChange = useCallback(
+        (key: string, value: string) => {
+            const val = value === 'all' ? '' : value;
+            navigateWithFilters({ [key]: val, page: '1' });
+        },
+        [navigateWithFilters],
+    );
 
-    const handleFiltersChange = (updates: Record<string, string>) => {
-        const next = { ...updates, page: '1' };
-        navigateWithFilters(next);
-    };
+    const handleFiltersChange = useCallback(
+        (updates: Record<string, string>) => {
+            navigateWithFilters({ ...updates, page: '1' });
+        },
+        [navigateWithFilters],
+    );
 
-    const handleFilterReset = () => {
-        router.get(
-            window.location.pathname,
-            {},
-            {
-                preserveState: false,
-                preserveScroll: true,
-                replace: true,
-            },
-        );
-    };
+    const handleFilterReset = useCallback(() => {
+        const preserved: Record<string, string> = {};
+        if (currentFilters.per_page) preserved.per_page = currentFilters.per_page;
+        if (currentFilters.sort) preserved.sort = currentFilters.sort;
+        if (currentFilters.direction) preserved.direction = currentFilters.direction;
+
+        router.get(window.location.pathname, preserved, {
+            preserveState: false,
+            preserveScroll: true,
+            replace: true,
+        });
+    }, [currentFilters]);
 
     const handleSort = (key: string) => {
         const currentSort = currentFilters.sort;
@@ -174,7 +204,7 @@ export default function ResourceIndex({
 
     // ── Row selection ─────────────────────────────────────────
 
-    const toggleSelect = (id: number) => {
+    const toggleSelect = (id: string | number) => {
         setSelectedIds((prev) => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id);
@@ -192,9 +222,9 @@ export default function ResourceIndex({
     };
 
     const handleBulkDelete = () => {
-        if (baseRoute) {
+        if (effectiveBulkDestroyRoute && selectedIds.size > 0) {
             router.post(
-                `${baseRoute}/bulk-destroy`,
+                effectiveBulkDestroyRoute,
                 { ids: Array.from(selectedIds) },
                 { onSuccess: () => setSelectedIds(new Set()) },
             );
@@ -212,6 +242,11 @@ export default function ResourceIndex({
             <ArrowDown className="ml-1 h-3 w-3" />
         );
     };
+
+    const hasRowActions =
+        Boolean(rowActions) ||
+        (Boolean(effectiveBaseRoute) &&
+            ROW_ACTIONS.some((a) => actions.includes(a)));
 
     const buildColumns = () => {
         const cols: any[] = [];
@@ -243,7 +278,8 @@ export default function ResourceIndex({
             cols.push({
                 header: col.sortable ? (
                     <button
-                        className="flex items-center hover:text-foreground"
+                        type="button"
+                        className="hover:text-foreground flex items-center"
                         onClick={() => handleSort(col.key)}
                     >
                         {col.label}
@@ -255,10 +291,10 @@ export default function ResourceIndex({
                 accessorKey: col.key,
                 className: col.className,
                 cell: cellOverrides?.[col.key]
-                    ? (item: any, index: number) =>
+                    ? (item: T, index: number) =>
                           cellOverrides[col.key](item, index)
                     : col.type === 'serial'
-                      ? (item: any, index: number) => (
+                      ? (_item: any, index: number) => (
                             <span className="text-muted-foreground">
                                 {(data.current_page - 1) * data.per_page +
                                     index +
@@ -266,144 +302,194 @@ export default function ResourceIndex({
                             </span>
                         )
                       : col.type === 'boolean'
-                      ? (item: any) => (
-                            <StatusBadge
-                                status={
-                                    get(item, col.key) ? 'Active' : 'Inactive'
-                                }
-                                variant={
-                                    get(item, col.key) ? 'success' : 'danger'
-                                }
-                            />
-                        )
-                      : col.type === 'status'
                         ? (item: any) => {
-                              const sFilter = meta.filters.find(
-                                  (f) => f.key === col.key,
-                              );
-                              if (
-                                  sFilter &&
-                                  sFilter.options &&
-                                  meta.actions.includes('edit') &&
-                                  baseRoute
-                              ) {
-                                  return (
-                                      <DropdownMenu>
-                                          <DropdownMenuTrigger asChild>
-                                              <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  className="capitalize"
-                                              >
-                                                  {get(item, col.key) ?? ''}
-                                                  <ChevronsUpDown className="ml-auto size-4" />
-                                              </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="start">
-                                              {sFilter.options.map(
-                                                  (opt: any) => (
-                                                      <DropdownMenuItem
-                                                          key={opt.value}
-                                                          onClick={() => {
-                                                              router.post(
-                                                                  `${baseRoute}/${item.id}`,
-                                                                  {
-                                                                      _method:
-                                                                          'patch',
-                                                                      [col.key]:
-                                                                          opt.value,
-                                                                  },
-                                                                  {
-                                                                      preserveScroll: true,
-                                                                  },
-                                                              );
-                                                          }}
-                                                      >
-                                                          {opt.label}
-                                                      </DropdownMenuItem>
-                                                  ),
-                                              )}
-                                          </DropdownMenuContent>
-                                      </DropdownMenu>
-                                  );
-                              }
+                              const val = resolveCellValue(item, col.key);
                               return (
                                   <StatusBadge
-                                      status={get(item, col.key) ?? ''}
+                                      status={val ? 'Active' : 'Inactive'}
+                                      variant={val ? 'success' : 'danger'}
                                   />
                               );
                           }
-                        : col.type === 'datetime'
+                        : col.type === 'badge'
                           ? (item: any) => (
-                                <span className="text-sm text-muted-foreground">
-                                    {get(item, col.key)
-                                        ? new Date(
-                                              get(item, col.key),
-                                          ).toLocaleString()
-                                        : '—'}
-                                </span>
+                                <StatusBadge
+                                    status={String(
+                                        resolveCellValue(item, col.key) ?? '',
+                                    )}
+                                />
                             )
-                          : col.type === 'image'
+                          : col.type === 'status'
                             ? (item: any) => {
-                                  const val = get(item, col.key);
-                                  return val ? (
-                                      <img
-                                          src={`/storage/${val}`}
-                                          alt=""
-                                          className="h-10 w-10 rounded border object-cover"
-                                      />
-                                  ) : (
-                                      <span className="text-xs text-muted-foreground">
-                                          No Image
-                                      </span>
+                                  const sFilter = meta.filters.find(
+                                      (f) => f.key === col.key,
                                   );
+                                  const val =
+                                      resolveCellValue(item, col.key) ?? '';
+                                  if (
+                                      sFilter &&
+                                      sFilter.options &&
+                                      canEdit &&
+                                      effectiveBaseRoute
+                                  ) {
+                                      return (
+                                          <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                  <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      className="capitalize"
+                                                  >
+                                                      {val}
+                                                      <ChevronsUpDown className="ml-auto size-4" />
+                                                  </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="start">
+                                                  {sFilter.options.map(
+                                                      (opt) => (
+                                                          <DropdownMenuItem
+                                                              key={opt.value}
+                                                              onClick={() => {
+                                                                  router.post(
+                                                                      `${effectiveBaseRoute}/${item.id}`,
+                                                                      {
+                                                                          _method:
+                                                                              'patch',
+                                                                          [col.key]:
+                                                                              opt.value,
+                                                                      },
+                                                                      {
+                                                                          preserveScroll: true,
+                                                                      },
+                                                                  );
+                                                              }}
+                                                          >
+                                                              {opt.label}
+                                                          </DropdownMenuItem>
+                                                      ),
+                                                  )}
+                                              </DropdownMenuContent>
+                                          </DropdownMenu>
+                                      );
+                                  }
+                                  return <StatusBadge status={String(val)} />;
                               }
-                            : undefined,
+                            : col.type === 'date'
+                              ? (item: any) => {
+                                    const val = resolveCellValue(item, col.key);
+                                    return (
+                                        <span className="text-muted-foreground text-sm">
+                                            {val
+                                                ? new Date(
+                                                      val,
+                                                  ).toLocaleDateString()
+                                                : '—'}
+                                        </span>
+                                    );
+                                }
+                              : col.type === 'datetime'
+                                ? (item: any) => {
+                                      const val = resolveCellValue(
+                                          item,
+                                          col.key,
+                                      );
+                                      return (
+                                          <span className="text-muted-foreground text-sm">
+                                              {val
+                                                  ? new Date(
+                                                        val,
+                                                    ).toLocaleString()
+                                                  : '—'}
+                                          </span>
+                                      );
+                                  }
+                                : col.type === 'image'
+                                  ? (item: any) => {
+                                        const val = resolveCellValue(
+                                            item,
+                                            col.key,
+                                        );
+                                        if (!val) {
+                                            return (
+                                                <span className="text-muted-foreground text-xs">
+                                                    No Image
+                                                </span>
+                                            );
+                                        }
+                                        const src =
+                                            typeof val === 'string' &&
+                                            (val.startsWith('http://') ||
+                                                val.startsWith('https://') ||
+                                                val.startsWith('/'))
+                                                ? val
+                                                : `/storage/${val}`;
+                                        return (
+                                            <img
+                                                src={src}
+                                                alt=""
+                                                className="h-10 w-10 rounded border object-cover"
+                                            />
+                                        );
+                                    }
+                                  : undefined,
             });
         }
 
-        // Action column
-        if (meta.actions.length > 0 || rowActions) {
+        // Action column (only when row actions exist)
+        if (hasRowActions) {
             cols.push({
                 header: <span className="text-right">Actions</span>,
                 className: 'text-right',
-                cell: (item: any) => (
+                cell: (item: T) => (
                     <div className="flex items-center justify-end gap-1">
                         {rowActions && rowActions(item)}
-                        {meta.actions.includes('show') && baseRoute && (
+                        {canShow && effectiveBaseRoute && (
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                    router.get(`${baseRoute}/${item.id}`)
+                                    router.get(
+                                        `${effectiveBaseRoute}/${item.id}`,
+                                    )
                                 }
                             >
                                 <Eye className="h-4 w-4" />
                             </Button>
                         )}
-                        {meta.actions.includes('edit') && baseRoute && (
+                        {canEdit && effectiveBaseRoute && (
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() =>
-                                    router.get(`${baseRoute}/${item.id}/edit`)
+                                    router.get(
+                                        `${effectiveBaseRoute}/${item.id}/edit`,
+                                    )
                                 }
                             >
                                 <Pencil className="h-4 w-4" />
                             </Button>
                         )}
-                        {meta.actions.includes('delete') && baseRoute && (
+                        {canDelete && effectiveBaseRoute && (
                             <ConfirmDialog
                                 trigger={
-                                    <Button variant="ghost" size="icon">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                    >
+                                        <Trash2 className="text-destructive h-4 w-4" />
                                     </Button>
                                 }
                                 title={`Delete ${meta.resource_name ?? 'Record'}?`}
                                 description="This action cannot be undone."
                                 confirmLabel="Delete"
                                 onConfirm={() =>
-                                    router.delete(`${baseRoute}/${item.id}`)
+                                    router.delete(
+                                        `${effectiveBaseRoute}/${item.id}`,
+                                    )
                                 }
                             />
                         )}
@@ -418,16 +504,16 @@ export default function ResourceIndex({
     // ── Page header actions ───────────────────────────────────
 
     const headerActionsList: any[] = [];
-    if (meta.actions.includes('create') && baseRoute) {
+    if (canCreate && effectiveCreateRoute) {
         headerActionsList.push({
-            label: `Add ${meta.resource_name ?? ''}`,
+            label: `Add ${meta.resource_name ?? ''}`.trim(),
             icon: 'add',
-            href: `${baseRoute}/create`,
+            href: effectiveCreateRoute,
         });
     }
-    if (importRoute) {
+    if (canImport && effectiveImportRoute) {
         headerActionsList.push({
-            label: `Import`,
+            label: 'Import',
             icon: 'import',
             onClick: () => setIsImportModalOpen(true),
             variant: 'outline',
@@ -435,12 +521,12 @@ export default function ResourceIndex({
     }
 
     const handleImportUpload = (file: File) => {
-        if (!importRoute) return;
+        if (!effectiveImportRoute) return;
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
-        router.post(importRoute, formData, {
-            onSuccess: (page) => {
+        router.post(effectiveImportRoute, formData, {
+            onSuccess: () => {
                 setIsImportModalOpen(false);
                 setIsUploading(false);
             },
@@ -455,18 +541,18 @@ export default function ResourceIndex({
 
     // ── Render ────────────────────────────────────────────────
 
-    const defaultBreadcrumbs: BreadcrumbItem[] = breadcrumbs ?? [
-        { title: resourceName, href: window.location.pathname },
-    ];
-
     return (
-        <AppLayout breadcrumbs={defaultBreadcrumbs}>
+        <>
             <Head title={resourceName} />
             <div className="flex flex-1 flex-col gap-4 p-4 sm:gap-6">
-                <PageHeader title={resourceName} actions={headerActionsList}>
-                    {exportRoute && (
+                <PageHeader
+                    title={resourceName}
+                    description={pageDescription}
+                    actions={headerActionsList}
+                >
+                    {effectiveExportRoute && (
                         <ExportButton
-                            href={exportRoute}
+                            href={effectiveExportRoute}
                             params={currentFilters}
                         />
                     )}
@@ -477,7 +563,7 @@ export default function ResourceIndex({
                     <BulkActions
                         selectedCount={selectedIds.size}
                         onDelete={
-                            meta.actions.includes('delete')
+                            canDelete && effectiveBulkDestroyRoute
                                 ? handleBulkDelete
                                 : undefined
                         }
@@ -494,6 +580,10 @@ export default function ResourceIndex({
                         total: data.total,
                         from: data.from ?? 0,
                         to: data.to ?? 0,
+                        first_page_url: data.first_page_url,
+                        last_page_url: data.last_page_url,
+                        prev_page_url: data.prev_page_url,
+                        next_page_url: data.next_page_url,
                         links: data.links,
                     }}
                     onPerPageChange={handlePerPageChange}
@@ -506,12 +596,13 @@ export default function ResourceIndex({
                             onReset={handleFilterReset}
                             search={currentFilters.search ?? ''}
                             onSearch={handleSearch}
+                            defaultSeparator={meta.default_separator}
                         />
                     }
                 />
             </div>
 
-            {importRoute && (
+            {effectiveImportRoute && (
                 <Dialog
                     open={isImportModalOpen}
                     onOpenChange={setIsImportModalOpen}
@@ -520,7 +611,7 @@ export default function ResourceIndex({
                         <DialogHeader>
                             <DialogTitle>Import {resourceName}</DialogTitle>
                             <DialogDescription>
-                                Upload a CSV or Excel file to batch import{' '}
+                                Upload a file to batch import{' '}
                                 {resourceName.toLowerCase()}.
                             </DialogDescription>
                         </DialogHeader>
@@ -528,12 +619,14 @@ export default function ResourceIndex({
                             <FileImport
                                 onUpload={handleImportUpload}
                                 uploading={isUploading}
-                                formatDownloadUrl={importFormatUrl}
+                                accept={effectiveImportAccept}
+                                maxSizeMB={effectiveImportMaxSizeMB}
+                                formatDownloadUrl={effectiveImportFormatUrl}
                             />
                         </div>
                     </DialogContent>
                 </Dialog>
             )}
-        </AppLayout>
+        </>
     );
 }
