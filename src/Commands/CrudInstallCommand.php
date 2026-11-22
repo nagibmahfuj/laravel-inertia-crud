@@ -226,6 +226,11 @@ class CrudInstallCommand extends Command
             $step++;
         }
 
+        if (!$this->option('no-assets') || $wireApp) {
+            $this->line("  <fg=cyan>{$step}.</> Rebuild frontend assets:           <fg=yellow>npm run build</> <fg=gray>(or npm run dev)</>");
+            $step++;
+        }
+
         $this->line("  <fg=cyan>{$step}.</> Generate additional CRUDs anytime: <fg=yellow>php artisan crud:generate</>");
         $step++;
         $this->line("  <fg=cyan>{$step}.</> Verify your setup anytime with:    <fg=yellow>php artisan crud:doctor</>");
@@ -346,7 +351,7 @@ class CrudInstallCommand extends Command
 
         if (!empty($missingUi) && $files->exists(base_path('components.json'))) {
             $this->runShellProcess(
-                array_merge(['npx', 'shadcn@latest', 'add', '--yes'], $missingUi),
+                array_merge(['npx', 'shadcn@latest', 'add', '--yes', '--overwrite'], $missingUi),
                 'Installing shadcn/ui components (' . count($missingUi) . ')'
             );
         }

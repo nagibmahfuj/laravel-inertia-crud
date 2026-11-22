@@ -185,7 +185,8 @@ class StarterBootstrapper
         $this->wireHandleInertiaRequests($examples);
         $this->wireAppLayout($force);
         $this->wireAppTsx();
-        $this->wireAppSidebar();
+        $navMainHasTitle = $this->wireNavMain();
+        $this->wireAppSidebar($navMainHasTitle);
         $this->wireConsoleSchedule();
     }
 
@@ -240,7 +241,8 @@ class StarterBootstrapper
 
         $content = $this->files->get($configPath);
 
-        if (preg_match("/['\"]" . preg_quote($routePrefix, '/') . "['\"]\s*=>/", $content)) {
+        // Match only active (uncommented) resource keys, ignoring example comments like `// 'users' => ...`
+        if (preg_match("/^[ \t]*['\"]" . preg_quote($routePrefix, '/') . "['\"]\s*=>/m", $content)) {
             $this->results[] = ['Config', 'EXISTS', "config/crud.php → resources.{$routePrefix}"];
             return;
         }
@@ -331,11 +333,46 @@ class StarterBootstrapper
         }
 
         $content = $this->files->get($userPath);
-        if (preg_match('/\$fillable\s*=\s*\[[^\]]*[\'"]role[\'"]/s', $content)) {
-            $this->results[] = ['User Model', 'EXISTS', "app/Models/User.php already includes 'role' in \$fillable"];
+
+        // Support both Laravel 13 `#[Fillable([...])]` attribute and classic `protected $fillable = [...]`
+        if (
+            preg_match('/#\[Fillable\(\[[^\]]*[\'"]role[\'"]/s', $content)
+            || preg_match('/\$fillable\s*=\s*\[[^\]]*[\'"]role[\'"]/s', $content)
+        ) {
+            $this->results[] = ['User Model', 'EXISTS', "app/Models/User.php already includes 'role' in fillable attributes"];
             return;
         }
 
+        // Case 1: Laravel 13 PHP attribute `#[Fillable(['name', 'email', 'password'])]`
+        $updated = preg_replace_callback(
+            '/(#\[Fillable\(\[)([^\]]*)(\]\)\])/s',
+            function (array $matches): string {
+                $body = rtrim($matches[2]);
+                if ($body === '') {
+                    return "{$matches[1]}'role'{$matches[3]}";
+                }
+                if (str_contains($body, "\n")) {
+                    if (!str_ends_with($body, ',')) {
+                        $body .= ',';
+                    }
+                    return "{$matches[1]}{$body}\n    'role',\n{$matches[3]}";
+                }
+                $sep = str_ends_with($body, ',') ? ' ' : ', ';
+
+                return "{$matches[1]}{$body}{$sep}'role'{$matches[3]}";
+            },
+            $content,
+            1,
+            $attrCount
+        );
+
+        if ($attrCount > 0 && $updated !== null) {
+            $this->files->put($userPath, $updated);
+            $this->results[] = ['User Model', 'UPDATED', "Added 'role' to #[Fillable] in app/Models/User.php"];
+            return;
+        }
+
+        // Case 2: Classic `protected $fillable = [...]` property
         $updated = preg_replace_callback(
             '/(\$fillable\s*=\s*\[)([^\]]*)(\];)/s',
             function (array $matches): string {
@@ -357,7 +394,7 @@ class StarterBootstrapper
             return;
         }
 
-        $this->results[] = ['User Model', 'MANUAL', "Add 'role' to \$fillable in app/Models/User.php"];
+        $this->results[] = ['User Model', 'MANUAL', "Add 'role' to fillable attributes in app/Models/User.php"];
     }
 
     protected function addHasRolesTraitToUser(): void
@@ -575,21 +612,25 @@ TSX;
             return;
         }
 
-        $updated = $content;
-        $changed = false;
+        $updated    = $content;
+        $changed    = false;
+        $hasToaster = str_contains($updated, '<Toaster');
 
-        if (!str_contains($updated, '@/components/ui/sonner')) {
+        if (!$hasToaster && !str_contains($updated, '@/components/ui/sonner')) {
             $updated = "import { Toaster } from '@/components/ui/sonner';\n" . $updated;
             $changed = true;
         }
 
         if (!str_contains($updated, '@/lib/crud-theme')) {
-            $updated = "import { applyCustomTheme, theme } from '@/lib/crud-theme';\n" . $updated;
+            $themeImport = $hasToaster
+                ? "import { applyCustomTheme } from '@/lib/crud-theme';\n"
+                : "import { applyCustomTheme, theme } from '@/lib/crud-theme';\n";
+            $updated = $themeImport . $updated;
             $changed = true;
         }
 
         // Inject <Toaster /> inside Inertia v3 `withApp` or Inertia v1/v2 `root.render`
-        if (!str_contains($updated, '<Toaster')) {
+        if (!$hasToaster) {
             if (preg_match('/(<App\s+\{\.\.\.props\}\s*\/>)/', $updated)) {
                 $updated = preg_replace(
                     '/(<App\s+\{\.\.\.props\}\s*\/>)/',
@@ -623,7 +664,41 @@ TSX;
         $this->results[] = ['Inertia Entry', 'MANUAL', 'Mount <Toaster {...theme.toast} /> and call applyCustomTheme() in resources/js/app.tsx'];
     }
 
-    protected function wireAppSidebar(): void
+    protected function wireNavMain(): bool
+    {
+        $path = resource_path('js/components/nav-main.tsx');
+        if (!$this->files->exists($path)) {
+            return false;
+        }
+
+        $content = $this->files->get($path);
+        if (preg_match('/title\s*\??\s*:\s*string/', $content)) {
+            return true;
+        }
+
+        $updated = preg_replace(
+            '/export\s+function\s+NavMain\(\{\s*items(?:\s*=\s*\[\])?\s*\}:\s*\{\s*items:\s*NavItem\[\];?\s*\}\)/',
+            "export function NavMain({\n    items = [],\n    title = 'Platform',\n}: {\n    items: NavItem[];\n    title?: string;\n})",
+            $content,
+            1,
+            $sigCount
+        );
+
+        if ($sigCount > 0 && $updated !== null && str_contains($updated, '<SidebarGroupLabel>Platform</SidebarGroupLabel>')) {
+            $updated = str_replace(
+                '<SidebarGroupLabel>Platform</SidebarGroupLabel>',
+                '<SidebarGroupLabel>{title}</SidebarGroupLabel>',
+                $updated
+            );
+            $this->files->put($path, $updated);
+            $this->results[] = ['NavMain', 'UPDATED', 'Added optional group title prop in resources/js/components/nav-main.tsx'];
+            return true;
+        }
+
+        return false;
+    }
+
+    protected function wireAppSidebar(bool $navMainHasTitle = false): void
     {
         $path = resource_path('js/components/app-sidebar.tsx');
         if (!$this->files->exists($path)) {
@@ -654,7 +729,11 @@ TSX;
         );
 
         if ($fnCount > 0 && $updated !== null) {
-            $navReplacement = "{navGroups.length > 0 ? (\n                    navGroups.map((group) => (\n                        <NavMain key={group.title} items={group.items} />\n                    ))\n                ) : (\n                    <NavMain items={mainNavItems} />\n                )}";
+            $navMainTag = $navMainHasTitle
+                ? '<NavMain key={group.title} title={group.title} items={group.items} />'
+                : '<NavMain key={group.title} items={group.items} />';
+
+            $navReplacement = "{navGroups.length > 0 ? (\n                    navGroups.map((group) => (\n                        {$navMainTag}\n                    ))\n                ) : (\n                    <NavMain items={mainNavItems} />\n                )}";
             $updated = str_replace('<NavMain items={mainNavItems} />', $navReplacement, $updated);
 
             $this->files->put($path, $updated);

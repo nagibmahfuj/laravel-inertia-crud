@@ -244,3 +244,94 @@ it('rejects invalid --roles or --examples option values', function () {
         '--no-assets' => true,
     ])->assertFailed();
 });
+
+it('handles Laravel 13 #[Fillable], commented config/crud.php users example, NavMain group title, and Inertia v3 app.tsx cleanly', function () {
+    // Replace User.php with Laravel 13 PHP attribute style
+    File::put(app_path('Models/User.php'), <<<'PHP'
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+
+#[Fillable(['name', 'email', 'password'])]
+class User extends Authenticatable
+{
+}
+PHP);
+
+    // Stock Laravel 13 NavMain component
+    File::put(resource_path('js/components/nav-main.tsx'), <<<'TSX'
+import { SidebarGroup, SidebarGroupLabel } from '@/components/ui/sidebar';
+import type { NavItem } from '@/types';
+
+export function NavMain({ items }: { items: NavItem[] }) {
+    return (
+        <SidebarGroup className="px-2 py-0">
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+        </SidebarGroup>
+    );
+}
+TSX);
+
+    // Stock Laravel 13 Inertia v3 app.tsx (already includes Toaster)
+    File::put(resource_path('js/app.tsx'), <<<'TSX'
+import { createInertiaApp } from '@inertiajs/react';
+import { Toaster } from '@/components/ui/sonner';
+
+void createInertiaApp({
+    withApp(app) {
+        return (
+            <>
+                {app}
+                <Toaster />
+            </>
+        );
+    },
+});
+TSX);
+
+    $this->artisan('crud:install', [
+        '--starter'   => true,
+        '--roles'     => 'column',
+        '--examples'  => 'users',
+        '--wire-app'  => true,
+        '--no-assets' => true,
+        '--force'     => true,
+    ])->assertSuccessful();
+
+    // Active (uncommented) 'users' entry must be added despite `// 'users' => ...` example comment
+    $configContent = File::get(config_path('crud.php'));
+    expect(preg_match("/^[ \t]*'users'\s*=>/m", $configContent))->toBe(1);
+
+    // Laravel 13 #[Fillable] attribute updated cleanly
+    expect(File::get(app_path('Models/User.php')))
+        ->toContain("#[Fillable(['name', 'email', 'password', 'role'])]");
+
+    // NavMain + AppSidebar wired with dynamic group title
+    expect(File::get(resource_path('js/components/nav-main.tsx')))
+        ->toContain("title = 'Platform'")
+        ->toContain('<SidebarGroupLabel>{title}</SidebarGroupLabel>')
+        ->and(File::get(resource_path('js/components/app-sidebar.tsx')))
+        ->toContain('<NavMain key={group.title} title={group.title} items={group.items} />');
+
+    // Inertia v3 app.tsx already has <Toaster /> so no unused `theme` import is added
+    $appTsx = File::get(resource_path('js/app.tsx'));
+    expect($appTsx)
+        ->toContain("import { applyCustomTheme } from '@/lib/crud-theme';")
+        ->not->toContain('applyCustomTheme, theme')
+        ->and(substr_count($appTsx, '<Toaster'))->toBe(1);
+
+    // Re-running must remain idempotent
+    $this->artisan('crud:install', [
+        '--starter'   => true,
+        '--roles'     => 'column',
+        '--examples'  => 'users',
+        '--wire-app'  => true,
+        '--no-assets' => true,
+    ])->assertSuccessful();
+
+    expect(substr_count(File::get(app_path('Models/User.php')), "'role'"))->toBe(1)
+        ->and(preg_match_all("/^[ \t]*'users'\s*=>/m", File::get(config_path('crud.php'))))->toBe(1);
+});

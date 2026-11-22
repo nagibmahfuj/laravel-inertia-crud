@@ -1,9 +1,10 @@
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
+    DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -29,6 +30,7 @@ import {
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
+    RotateCcw,
     SlidersHorizontal,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -171,6 +173,15 @@ export function DataTable<T>({
         [columns, hiddenColumns],
     );
 
+    const perPageOptions = useMemo(() => {
+        const defaults = [10, 15, 25, 50, 100];
+        const current = Number(pagination.per_page);
+        if (Number.isFinite(current) && current > 0 && !defaults.includes(current)) {
+            defaults.push(current);
+        }
+        return defaults.sort((a, b) => a - b);
+    }, [pagination.per_page]);
+
     useEffect(() => {
         setSearch(initialSearch);
     }, [initialSearch]);
@@ -240,44 +251,49 @@ export function DataTable<T>({
                                     <span>Columns</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align="end"
-                                className="max-h-[320px] w-[190px] overflow-y-auto"
-                            >
-                                {hideableColumns.map((col) => {
-                                    const key = col.columnKey!;
-                                    const isVisible = !hiddenColumns.has(key);
-                                    return (
-                                        <DropdownMenuItem
-                                            key={key}
-                                            onSelect={(e) => {
-                                                e.preventDefault();
-                                                toggleColumn(key);
-                                            }}
-                                            className="flex items-center gap-2"
-                                        >
-                                            <Checkbox checked={isVisible} />
-                                            <span className="truncate">
-                                                {col.columnLabel ?? key}
-                                            </span>
-                                        </DropdownMenuItem>
-                                    );
-                                })}
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel className="text-muted-foreground text-xs font-semibold">
+                                    Toggle columns
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <div className="max-h-[260px] overflow-y-auto">
+                                    {hideableColumns.map((col) => {
+                                        const key = col.columnKey!;
+                                        const isVisible =
+                                            !hiddenColumns.has(key);
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={key}
+                                                checked={isVisible}
+                                                onSelect={(e) => {
+                                                    e.preventDefault();
+                                                    toggleColumn(key);
+                                                }}
+                                                className="cursor-pointer"
+                                            >
+                                                <span className="truncate">
+                                                    {col.columnLabel ?? key}
+                                                </span>
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
+                                </div>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                     onSelect={(e) => {
                                         e.preventDefault();
                                         resetColumns();
                                     }}
-                                    className="justify-center text-xs font-medium"
+                                    className="text-muted-foreground focus:text-foreground cursor-pointer justify-center gap-1.5 text-xs font-medium"
                                 >
-                                    Reset columns
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    <span>Reset columns</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}
 
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-muted-foreground text-sm whitespace-nowrap">
                         Rows per page
                     </span>
                     <Select
@@ -297,14 +313,15 @@ export function DataTable<T>({
                             }
                         }}
                     >
-                        <SelectTrigger className="h-8 w-[70px]">
-                            <SelectValue placeholder={pagination.per_page} />
+                        <SelectTrigger className="h-8 w-[72px]">
+                            <SelectValue placeholder={String(pagination.per_page)} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="10">10</SelectItem>
-                            <SelectItem value="20">20</SelectItem>
-                            <SelectItem value="50">50</SelectItem>
-                            <SelectItem value="100">100</SelectItem>
+                            {perPageOptions.map((size) => (
+                                <SelectItem key={size} value={String(size)}>
+                                    {size}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
@@ -364,7 +381,7 @@ export function DataTable<T>({
 
             <div className="mt-auto flex flex-col items-center justify-between gap-2 overflow-clip px-2 sm:flex-row @max-2xl/content:flex-col-reverse @max-2xl/content:gap-4">
                 <div className="text-muted-foreground text-sm">
-                    Showing {pagination.from} to {pagination.to} of{' '}
+                    Showing {pagination.from ?? 0} to {pagination.to ?? 0} of{' '}
                     {pagination.total} entries
                 </div>
                 <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-6 lg:gap-8">

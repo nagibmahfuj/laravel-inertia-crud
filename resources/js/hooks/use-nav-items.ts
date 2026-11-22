@@ -1,23 +1,42 @@
 import { usePage } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import {
+    Activity,
+    ArrowRightLeft,
+    BarChart3,
+    Bell,
+    BrainCircuit,
     Calendar,
+    CheckCircle,
+    Clock,
+    Database,
     FileChartColumn,
+    FileText,
+    Folder,
+    Gift,
+    Globe,
     HelpCircle,
+    Key,
     LayoutGrid,
+    Lock,
+    Mail,
+    Map,
     MapPin,
+    Music,
     Package,
     QrCode,
+    Settings,
+    Shield,
     ShieldAlert,
+    ShoppingBag,
+    Star,
+    Tag,
+    TicketCheck,
+    Trophy,
+    UserCog,
     Users,
     UsersRound,
-    BrainCircuit,
-    Gift,
-    TicketCheck,
-    ArrowRightLeft,
-    Map,
-    UserCog,
-    Trophy,
+    Video,
 } from 'lucide-react';
 
 /**
@@ -25,28 +44,47 @@ import {
  * Add new icons here as needed.
  */
 const iconMap: Record<string, LucideIcon> = {
+    Activity,
+    ArrowRightLeft,
+    BarChart3,
+    Bell,
+    BrainCircuit,
+    Calendar,
+    CheckCircle,
+    Clock,
+    Database,
+    FileChartColumn,
+    FileText,
+    Folder,
+    Gift,
+    Globe,
+    HelpCircle,
+    Key,
     LayoutGrid,
+    Lock,
+    Mail,
+    Map,
+    MapPin,
+    Music,
+    Package,
+    QrCode,
+    Settings,
+    Shield,
+    ShieldAlert,
+    ShoppingBag,
+    Star,
+    Tag,
+    TicketCheck,
+    Trophy,
+    UserCog,
     Users,
     UsersRound,
-    Calendar,
-    HelpCircle,
-    BrainCircuit,
-    QrCode,
-    Gift,
-    TicketCheck,
-    MapPin,
-    Package,
-    ArrowRightLeft,
-    ShieldAlert,
-    FileChartColumn,
-    Map,
-    UserCog,
-    Trophy,
+    Video,
 };
 
 export interface NavItem {
     title: string;
-    href?: string;
+    href: string;
     icon?: LucideIcon | null;
     items?: NavItem[];
 }
@@ -74,8 +112,8 @@ interface NavGroupData {
 function mapNavItem(item: NavItemData): NavItem {
     return {
         title: item.title,
-        href: item.href,
-        icon: item.icon ? iconMap[item.icon] : null,
+        href: item.href ?? '#',
+        icon: item.icon ? (iconMap[item.icon] ?? null) : null,
         items: item.items ? item.items.map(mapNavItem) : undefined,
     };
 }
@@ -102,10 +140,10 @@ export function useNavGroups(): NavGroup[] {
  */
 export function useNavItems(): NavItem[] {
     const groups = useNavGroups();
-    
+
     const flattenItems = (items: NavItem[]): NavItem[] => {
         return items.reduce((acc: NavItem[], item) => {
-            if (item.href) {
+            if (item.href && item.href !== '#') {
                 acc.push(item);
             }
             if (item.items) {

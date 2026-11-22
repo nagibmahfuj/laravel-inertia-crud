@@ -640,7 +640,7 @@ class CrudGenerateCommand extends Command
 
         $content = $this->files->get($configPath);
 
-        if (preg_match("/['\"]" . preg_quote($routePrefix, '/') . "['\"]\s*=>/", $content)) {
+        if (preg_match("/^[ \t]*['\"]" . preg_quote($routePrefix, '/') . "['\"]\s*=>/m", $content)) {
             $this->results[] = ['Config', 'EXISTS', "config/crud.php → resources.{$routePrefix}"];
             return;
         }
