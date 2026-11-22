@@ -15,6 +15,12 @@
     ],
     "type": "library",
     "license": "MIT",
+    "homepage": "https://nagibmahfuj.github.io/laravel-inertia-crud/",
+    "support": {
+        "docs": "https://nagibmahfuj.github.io/laravel-inertia-crud/",
+        "issues": "https://github.com/nagibmahfuj/laravel-inertia-crud/issues",
+        "source": "https://github.com/nagibmahfuj/laravel-inertia-crud"
+    },
     "authors": [
         {
             "name": "Nagib Mahfuj",

@@ -1,12 +1,14 @@
 # Laravel Inertia CRUD
 
 [![Latest Version](https://img.shields.io/packagist/v/nagibmahfuj/laravel-inertia-crud.svg)](https://packagist.org/packages/nagibmahfuj/laravel-inertia-crud)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-0ea5e9.svg)](https://nagibmahfuj.github.io/laravel-inertia-crud/)
 [![License](https://img.shields.io/packagist/l/nagibmahfuj/laravel-inertia-crud.svg)](https://packagist.org/packages/nagibmahfuj/laravel-inertia-crud)
 
 A **config-driven CRUD scaffolding** package for **Laravel + Inertia.js (React/TypeScript)**. Define your columns, fields, filters, chunked uploads, and actions in a single PHP `resourceConfig()` array — the package handles searching, filtering, sorting, pagination, validation, bulk deletion, CSV export, native chunked file uploads, and renders normalized React/TypeScript UI components automatically.
 
-> [!NOTE]
-> Upgrading from **v1.x** to **v2.0**? See the dedicated [Upgrade Guide (v1 → v2)](UPGRADE.md) for breaking changes and step-by-step migration instructions.
+> [!TIP]
+> **Full Documentation:** Browse the interactive, searchable v2 documentation at **[nagibmahfuj.github.io/laravel-inertia-crud](https://nagibmahfuj.github.io/laravel-inertia-crud/)**.
+> Upgrading from **v1.x** to **v2.0**? See the dedicated [Upgrade Guide (v1 → v2)](UPGRADE.md) or the [online upgrade guide](https://nagibmahfuj.github.io/laravel-inertia-crud/upgrade/v1-to-v2).
 
 ---
 

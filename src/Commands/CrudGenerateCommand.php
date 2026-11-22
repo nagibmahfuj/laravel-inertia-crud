@@ -145,7 +145,7 @@ class CrudGenerateCommand extends Command
         $this->line("  <fg=cyan>Environment</>   PHP <options=bold>{$phpVer}</>  <fg=gray>•</>  Laravel <options=bold>{$laravelVer}</>  <fg=gray>•</>  Role Resolver: <options=bold>{$resolver}</>");
         $this->line("  <fg=cyan>Defaults</>      Controllers: <options=bold>{$controllerNs}</>  <fg=gray>•</>  Pages: <options=bold>{$pagesRoot}</>");
         $this->line("  <fg=cyan>Chunk Upload</>  {$chunkDisplay}  <fg=gray>•</>  Config: {$configDisplay}");
-        $this->line('  <fg=cyan>Repository</>    <fg=gray>https://github.com/nagibmahfuj/laravel-inertia-crud</>');
+        $this->line('  <fg=cyan>Docs & Repo</>   <fg=gray>https://nagibmahfuj.github.io/laravel-inertia-crud/</>  <fg=gray>•</>  <fg=gray>https://github.com/nagibmahfuj/laravel-inertia-crud</>');
         $this->line('  <fg=gray>────────────────────────────────────────────────────────────────────────────────────────────</>');
         $this->newLine();
     }
