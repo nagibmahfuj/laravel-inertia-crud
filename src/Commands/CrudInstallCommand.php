@@ -104,6 +104,12 @@ class CrudInstallCommand extends Command
             );
         }
 
+        // 0. If Spatie role mode + auto-install was requested, install Spatie BEFORE
+        //    StarterBootstrapper modifies User.php (HasRoles) or routes/web.php.
+        if ($roleMode === 'spatie' && $installDeps && !$this->isSpatieInstalled($files)) {
+            $this->installSpatiePermission($files);
+        }
+
         // 1. Publish config
         $this->call('vendor:publish', [
             '--tag'   => 'crud-config',
@@ -165,16 +171,15 @@ class CrudInstallCommand extends Command
             $requiredUi[]  = 'sonner';
         }
 
-        $missingNpm = $this->findMissingNpmPackages($files, $requiredNpm);
-        $missingUi  = $this->findMissingShadcnComponents($files, $requiredUi);
-        $needsSpatie = $roleMode === 'spatie' && !class_exists(\Spatie\Permission\Traits\HasRoles::class);
+        $missingNpm  = $this->findMissingNpmPackages($files, $requiredNpm);
+        $missingUi   = $this->findMissingShadcnComponents($files, $requiredUi);
+        $needsSpatie = $roleMode === 'spatie' && !$this->isSpatieInstalled($files);
 
-        if ($installDeps) {
-            $this->installDependencies($files, $missingNpm, $missingUi, $needsSpatie);
+        if ($installDeps && (!empty($missingNpm) || !empty($missingUi))) {
+            $this->installFrontendDependencies($files, $missingNpm, $missingUi);
             // Re-evaluate after installation attempt
-            $missingNpm  = $this->findMissingNpmPackages($files, $requiredNpm);
-            $missingUi   = $this->findMissingShadcnComponents($files, $requiredUi);
-            $needsSpatie = $roleMode === 'spatie' && !class_exists(\Spatie\Permission\Traits\HasRoles::class);
+            $missingNpm = $this->findMissingNpmPackages($files, $requiredNpm);
+            $missingUi  = $this->findMissingShadcnComponents($files, $requiredUi);
         }
 
         $this->newLine();
@@ -209,6 +214,12 @@ class CrudInstallCommand extends Command
         $this->newLine();
         $this->line('  <fg=green;options=bold>✓ Installation complete!</> Next steps:');
         $step = 1;
+
+        if ($needsSpatie) {
+            $this->line("  <fg=cyan>{$step}.</> Install Spatie Permission:         <fg=yellow>composer require spatie/laravel-permission</>");
+            $this->line('     And publish its migrations:        <fg=yellow>php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvider"</>');
+            $step++;
+        }
 
         if ($roleMode !== 'none' || in_array('posts', $examples, true)) {
             $this->line("  <fg=cyan>{$step}.</> Run migrations:                    <fg=yellow>php artisan migrate</>");
@@ -321,22 +332,39 @@ class CrudInstallCommand extends Command
         ));
     }
 
-    protected function installDependencies(
-        Filesystem $files,
-        array $missingNpm,
-        array $missingUi,
-        bool $needsSpatie
-    ): void {
+    protected function installSpatiePermission(Filesystem $files): void
+    {
         $this->newLine();
-        $this->line('  <fg=cyan;options=bold>Installing Dependencies</>');
+        $this->line('  <fg=cyan;options=bold>Installing Spatie Permission</>');
 
-        if ($needsSpatie) {
-            $this->runShellProcess(['composer', 'require', 'spatie/laravel-permission'], 'Installing spatie/laravel-permission');
+        if ($files->exists(base_path('composer.json')) && !$this->isPackageInComposerJson($files, 'nagibmahfuj/laravel-inertia-crud')) {
+            $this->components->warn(
+                'nagibmahfuj/laravel-inertia-crud is not listed in composer.json — skipping automatic `composer require spatie/laravel-permission` so Composer does not uninstall this package.'
+            );
+            $this->line('  Run manually: <fg=yellow>composer require nagibmahfuj/laravel-inertia-crud spatie/laravel-permission</>');
+            return;
+        }
+
+        $installed = $this->runShellProcess(
+            ['composer', 'require', 'spatie/laravel-permission'],
+            'Installing spatie/laravel-permission'
+        );
+
+        if ($installed || $this->isSpatieInstalled($files)) {
             $this->runShellProcess(
                 [PHP_BINARY, 'artisan', 'vendor:publish', '--provider=Spatie\\Permission\\PermissionServiceProvider'],
                 'Publishing Spatie Permission config & migrations'
             );
         }
+    }
+
+    protected function installFrontendDependencies(
+        Filesystem $files,
+        array $missingNpm,
+        array $missingUi
+    ): void {
+        $this->newLine();
+        $this->line('  <fg=cyan;options=bold>Installing Frontend Dependencies</>');
 
         if (!empty($missingNpm) && $files->exists(base_path('package.json'))) {
             $this->runShellProcess(
@@ -355,6 +383,28 @@ class CrudInstallCommand extends Command
                 'Installing shadcn/ui components (' . count($missingUi) . ')'
             );
         }
+    }
+
+    protected function isSpatieInstalled(Filesystem $files): bool
+    {
+        return class_exists(\Spatie\Permission\Traits\HasRoles::class)
+            || $files->isDirectory(base_path('vendor/spatie/laravel-permission'));
+    }
+
+    protected function isPackageInComposerJson(Filesystem $files, string $package): bool
+    {
+        $composerPath = base_path('composer.json');
+        if (!$files->exists($composerPath)) {
+            return false;
+        }
+
+        $decoded = json_decode((string) $files->get($composerPath), true);
+        if (!is_array($decoded)) {
+            return false;
+        }
+
+        return array_key_exists($package, (array) ($decoded['require'] ?? []))
+            || array_key_exists($package, (array) ($decoded['require-dev'] ?? []));
     }
 
     /**

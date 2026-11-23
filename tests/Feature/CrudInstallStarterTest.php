@@ -335,3 +335,34 @@ TSX);
     expect(substr_count(File::get(app_path('Models/User.php')), "'role'"))->toBe(1)
         ->and(preg_match_all("/^[ \t]*'users'\s*=>/m", File::get(config_path('crud.php'))))->toBe(1);
 });
+
+it('guards against self-uninstalling when composer.json omits this package during --roles=spatie --install-deps', function () {
+    $composerPath   = base_path('composer.json');
+    $hadComposer    = File::exists($composerPath);
+    $origComposer   = $hadComposer ? File::get($composerPath) : null;
+
+    File::put($composerPath, json_encode([
+        'name'    => 'example/app',
+        'require' => ['php' => '^8.2'],
+    ], JSON_PRETTY_PRINT));
+
+    try {
+        $this->artisan('crud:install', [
+            '--starter'      => true,
+            '--roles'        => 'spatie',
+            '--examples'     => 'users',
+            '--install-deps' => true,
+            '--no-assets'    => true,
+            '--force'        => true,
+        ])
+            ->assertSuccessful()
+            ->expectsOutputToContain('not listed in composer.json')
+            ->expectsOutputToContain('composer require spatie/laravel-permission');
+    } finally {
+        if ($hadComposer && $origComposer !== null) {
+            File::put($composerPath, $origComposer);
+        } else {
+            File::delete($composerPath);
+        }
+    }
+});
