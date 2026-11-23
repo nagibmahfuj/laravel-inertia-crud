@@ -270,7 +270,7 @@ class CrudInstallCommand extends Command
         }
 
         if (!$interactive) {
-            return class_exists(\Spatie\Permission\Traits\HasRoles::class) ? 'spatie' : 'column';
+            return trait_exists(\Spatie\Permission\Traits\HasRoles::class) ? 'spatie' : 'column';
         }
 
         return (string) select(
@@ -280,7 +280,7 @@ class CrudInstallCommand extends Command
                 'spatie' => 'Spatie Laravel Permission (spatie/laravel-permission — multi-role HasRoles)',
                 'none'   => 'None (keep my existing auth/role setup)',
             ],
-            default: class_exists(\Spatie\Permission\Traits\HasRoles::class) ? 'spatie' : 'column',
+            default: trait_exists(\Spatie\Permission\Traits\HasRoles::class) ? 'spatie' : 'column',
             hint: 'Both options work out of the box with BaseCrudPolicy and config/crud.php.'
         );
     }
@@ -387,7 +387,7 @@ class CrudInstallCommand extends Command
 
     protected function isSpatieInstalled(Filesystem $files): bool
     {
-        return class_exists(\Spatie\Permission\Traits\HasRoles::class)
+        return trait_exists(\Spatie\Permission\Traits\HasRoles::class)
             || $files->isDirectory(base_path('vendor/spatie/laravel-permission'));
     }
 

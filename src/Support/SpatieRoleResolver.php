@@ -36,6 +36,10 @@ class SpatieRoleResolver implements RoleResolver
 	 */
 	public function hasRole(Authenticatable $user, string|array $roles): bool
 	{
+		if (empty($roles)) {
+			return false;
+		}
+
 		// Use Spatie's hasRole() if available
 		if (method_exists($user, 'hasRole')) {
 			return $user->hasRole($roles);

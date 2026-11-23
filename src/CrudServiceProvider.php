@@ -70,7 +70,7 @@ class CrudServiceProvider extends ServiceProvider
                 return $app->make($customResolver);
             }
 
-            if (class_exists(\Spatie\Permission\Traits\HasRoles::class)) {
+            if (trait_exists(\Spatie\Permission\Traits\HasRoles::class)) {
                 return new SpatieRoleResolver();
             }
 

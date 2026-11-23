@@ -89,7 +89,7 @@ class StarterBootstrapper
 
         if (in_array('users', $examples, true)) {
             $useSpatie = $roleMode === 'spatie'
-                || ($roleMode === 'none' && class_exists(\Spatie\Permission\Traits\HasRoles::class));
+                || ($roleMode === 'none' && trait_exists(\Spatie\Permission\Traits\HasRoles::class));
 
             $controllerStub = $useSpatie
                 ? $this->starterStubPath('UserControllerSpatie.stub')

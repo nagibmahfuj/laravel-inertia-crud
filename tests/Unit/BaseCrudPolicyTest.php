@@ -63,3 +63,31 @@ it('supports read_only_roles alias and boolean no_delete => true at resource lev
         ->and($policy->create($viewer))->toBeFalse();
 });
 
+it('resolves Spatie roles via SpatieRoleResolver even when user has no role column', function () {
+    $resolver = new \NagibMahfuj\Crud\Support\SpatieRoleResolver();
+    $policy   = new ProductPolicy($resolver);
+    $product  = new Product();
+
+    $spatieAdmin = new class extends \Illuminate\Foundation\Auth\User {
+        public function getRoleNames(): \Illuminate\Support\Collection
+        {
+            return collect(['super_admin']);
+        }
+
+        public function hasRole($roles): bool
+        {
+            return collect((array) $roles)->intersect(['super_admin'])->isNotEmpty();
+        }
+    };
+
+    expect($resolver->getRoles($spatieAdmin))->toBe(['super_admin'])
+        ->and($resolver->hasRole($spatieAdmin, []))->toBeFalse()
+        ->and($resolver->hasRole($spatieAdmin, ['super_admin']))->toBeTrue()
+        ->and($resolver->hasRole($spatieAdmin, ['viewer']))->toBeFalse()
+        ->and($policy->viewAny($spatieAdmin))->toBeTrue()
+        ->and($policy->create($spatieAdmin))->toBeTrue()
+        ->and($policy->update($spatieAdmin, $product))->toBeTrue()
+        ->and($policy->delete($spatieAdmin, $product))->toBeTrue()
+        ->and($policy->import($spatieAdmin))->toBeTrue();
+});
+
